@@ -178,6 +178,53 @@ func TestSimpleString_Deserialize(t *testing.T) {
 	}
 }
 
+func TestError_Deserialize(t *testing.T) {
+	tests := []struct {
+		name      string
+		give      *bytes.Buffer
+		wantFrame Error
+		wantErr   bool
+	}{
+		{
+			name:      "basic working frame",
+			give:      bytes.NewBufferString("hello\r\n"),
+			wantFrame: Error{value: "hello"},
+			wantErr:   false,
+		},
+		{
+			name:      "basic working frame with data left in the buffer",
+			give:      bytes.NewBufferString("hello\r\nworld"),
+			wantFrame: Error{value: "hello"},
+			wantErr:   false,
+		},
+		{
+			name:      "working frame should not contain CR in the middle",
+			give:      bytes.NewBufferString("hel\rlo\r\n"),
+			wantFrame: Error{},
+			wantErr:   true,
+		},
+		{
+			name:      "working frame should not contain LF in the middle",
+			give:      bytes.NewBufferString("hel\nlo\r\n"),
+			wantFrame: Error{},
+			wantErr:   true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &Error{}
+			err := s.Deserialize(tt.give)
+			if *s != tt.wantFrame {
+				t.Errorf("Deserialize() got = %v, want %v", *s, tt.wantFrame)
+			}
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Deserialize() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+		})
+	}
+}
+
 //func TestBulkString_Deserialize(t *testing.T) {
 //	tests := []struct {
 //		name      string
