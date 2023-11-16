@@ -131,7 +131,7 @@ func TestNewSimpleString(t *testing.T) {
 	}
 }
 
-func TestSimpleString_Deserialize(t *testing.T) {
+func TestSimpleString_DecodeSimpleString(t *testing.T) {
 	tests := []struct {
 		name      string
 		give      *bytes.Buffer
@@ -165,20 +165,25 @@ func TestSimpleString_Deserialize(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := &SimpleString{}
-			err := s.Deserialize(tt.give)
-			if *s != tt.wantFrame {
-				t.Errorf("Deserialize() got = %v, want %v", *s, tt.wantFrame)
+			f, err := DecodeSimpleString(tt.give)
+			if err != nil { // an error occurred
+				if tt.wantErr { // but it is expected
+					return // so the test is successful.
+				}
+				// not expected though, fail the test.
+				t.Fatalf("DecodeSimpleString() unexpected error = %v", err)
+			} else if tt.wantErr { // no error but one was expected!
+				t.Fatalf("DecodeSimpleString() expected error but got none.")
 			}
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Deserialize() error = %v, wantErr %v", err, tt.wantErr)
-				return
+			// finally, if no errors and none are expected, check the result:
+			if *f != tt.wantFrame {
+				t.Errorf("DecodeSimpleString() got = %v, want %v", *f, tt.wantFrame)
 			}
 		})
 	}
 }
 
-func TestError_Deserialize(t *testing.T) {
+func TestError_DecodeError(t *testing.T) {
 	tests := []struct {
 		name      string
 		give      *bytes.Buffer
@@ -212,14 +217,17 @@ func TestError_Deserialize(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := &Error{}
-			err := s.Deserialize(tt.give)
-			if *s != tt.wantFrame {
-				t.Errorf("Deserialize() got = %v, want %v", *s, tt.wantFrame)
+			f, err := DecodeError(tt.give)
+			if err != nil {
+				if tt.wantErr {
+					return
+				}
+				t.Fatalf("DecodeError() unexpected error = %v", err)
+			} else if tt.wantErr {
+				t.Fatalf("DecodeError() expected error but got none.")
 			}
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Deserialize() error = %v, wantErr %v", err, tt.wantErr)
-				return
+			if *f != tt.wantFrame {
+				t.Errorf("DecodeError() got = %v, want %v", *f, tt.wantFrame)
 			}
 		})
 	}
@@ -293,7 +301,7 @@ func TestSimpleInteger_Serialize(t *testing.T) {
 	}
 }
 
-func TestInteger_Deserialize(t *testing.T) {
+func TestInteger_DecodeInteger(t *testing.T) {
 	tests := []struct {
 		name      string
 		give      *bytes.Buffer
@@ -333,20 +341,23 @@ func TestInteger_Deserialize(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := &Integer{}
-			err := s.Deserialize(tt.give)
-			if *s != tt.wantFrame {
-				t.Errorf("Deserialize() got = %v, want %v", *s, tt.wantFrame)
+			f, err := DecodeInteger(tt.give)
+			if err != nil {
+				if tt.wantErr {
+					return
+				}
+				t.Fatalf("DecodeInteger() unexpected error = %v", err)
+			} else if tt.wantErr {
+				t.Fatalf("DecodeInteger() expected error but got none.")
 			}
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Deserialize() error = %v, wantErr %v", err, tt.wantErr)
-				return
+			if *f != tt.wantFrame {
+				t.Errorf("DecodeInteger() got = %v, want %v", *f, tt.wantFrame)
 			}
 		})
 	}
 }
 
-func TestSimpleBulk_String(t *testing.T) {
+func TestBulk_String(t *testing.T) {
 	tests := []struct {
 		name string
 		give string
@@ -390,7 +401,7 @@ func TestSimpleBulk_String(t *testing.T) {
 	}
 }
 
-func TestBulkString_Deserialize(t *testing.T) {
+func TestBulkString_DecodeBulkString(t *testing.T) {
 	tests := []struct {
 		name      string
 		give      *bytes.Buffer
@@ -436,14 +447,17 @@ func TestBulkString_Deserialize(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := &BulkString{}
-			err := s.Deserialize(tt.give)
-			if *s != tt.wantFrame {
-				t.Errorf("Deserialize() got = %v, want %v", *s, tt.wantFrame)
+			f, err := DecodeBulkString(tt.give)
+			if err != nil {
+				if tt.wantErr {
+					return
+				}
+				t.Fatalf("DecodeBulkString() unexpected error = %v", err)
+			} else if tt.wantErr {
+				t.Fatalf("DecodeBulkString() expected error but got none.")
 			}
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Deserialize() error = %v, wantErr %v", err, tt.wantErr)
-				return
+			if *f != tt.wantFrame {
+				t.Errorf("DecodeBulkString() got = %v, want %v", *f, tt.wantFrame)
 			}
 		})
 	}
@@ -478,7 +492,7 @@ func TestBool_String(t *testing.T) {
 	}
 }
 
-func TestBool_Deserialize(t *testing.T) {
+func TestBool_DecodeBool(t *testing.T) {
 	tests := []struct {
 		name      string
 		give      *bytes.Buffer
@@ -506,14 +520,75 @@ func TestBool_Deserialize(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := &Bool{}
-			err := s.Deserialize(tt.give)
-			if *s != tt.wantFrame {
-				t.Errorf("Deserialize() got = %v, want %v", *s, tt.wantFrame)
+			f, err := DecodeBool(tt.give)
+			if err != nil {
+				if tt.wantErr {
+					return
+				}
+				t.Fatalf("DecodeBool() unexpected error = %v", err)
+			} else if tt.wantErr {
+				t.Fatalf("DecodeBool() expected error but got none.")
 			}
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Deserialize() error = %v, wantErr %v", err, tt.wantErr)
-				return
+			if *f != tt.wantFrame {
+				t.Errorf("DecodeBool() got = %v, want %v", *f, tt.wantFrame)
+			}
+		})
+	}
+}
+
+func TestArray_String(t *testing.T) {
+	tests := []struct {
+		name string
+		give Array
+		want string
+	}{
+		{
+			name: "empty array",
+			give: Array{},
+			want: "*0\r\n",
+		},
+		{
+			name: "array of bulk strings",
+			give: Array{
+				value: []Framer{
+					&BulkString{value: "hello"},
+					&BulkString{value: "world"},
+				},
+			},
+			want: "*2\r\n$5\r\nhello\r\n$5\r\nworld\r\n",
+		},
+		{
+			name: "mixed frame types",
+			give: Array{
+				value: []Framer{
+					&BulkString{value: "hello"},
+					&SimpleString{value: "world"},
+					&Integer{value: 25},
+				},
+			},
+			want: "*3\r\n$5\r\nhello\r\n+world\r\n:25\r\n",
+		},
+		//{
+		//	name: "a valid bulk string can be numeric",
+		//	give: "25",
+		//	want: "$2\r\n25\r\n",
+		//},
+		//{
+		//	name: "a valid bulk string can contain CR in the middle",
+		//	give: "hello\rhi",
+		//	want: "$8\r\nhello\rhi\r\n",
+		//},
+		//{
+		//	name: "a valid bulk string can contain LF in the middle",
+		//	give: "hello\nhi",
+		//	want: "$8\r\nhello\nhi\r\n",
+		//},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &tt.give
+			if got := s.String(); got != tt.want {
+				t.Errorf("String() got = %v, want %v", got, tt.want)
 			}
 		})
 	}
