@@ -1,7 +1,7 @@
 package frame
 
 import (
-	"bytes"
+	"bufio"
 	"errors"
 	"fmt"
 	"strconv"
@@ -188,26 +188,26 @@ func (a *Array) Serialize() []byte {
 // bytes read upon error are lost. Decode relies on some decoding function define
 // at frames level. For instance, when decode identify that it need to decode a simple
 // string Frame, it would call DecodeSimpleString.
-func Decode(buff *bytes.Buffer) (Framer, error) {
-	frameID, err := buff.ReadByte()
+func Decode(rd *bufio.Reader) (Framer, error) {
+	frameID, err := rd.ReadByte()
 	if err != nil {
 		return nil, err
 	}
 	switch frameID {
 	case '+':
-		return DecodeSimpleString(buff)
+		return DecodeSimpleString(rd)
 	case '-':
-		return DecodeError(buff)
+		return DecodeError(rd)
 	case ':':
-		return DecodeInteger(buff)
+		return DecodeInteger(rd)
 	case '$':
-		return DecodeBulkString(buff)
+		return DecodeBulkString(rd)
 	case '#':
-		return DecodeBool(buff)
+		return DecodeBool(rd)
 	case '_':
-		return DecodeNull(buff)
+		return DecodeNull(rd)
 	case '*':
-		return DecodeArray(buff)
+		return DecodeArray(rd)
 	default:
 		return nil, fmt.Errorf("unknown frameID: %v", frameID)
 	}
@@ -215,7 +215,7 @@ func Decode(buff *bytes.Buffer) (Framer, error) {
 
 // DecodeSimpleString consume a simple string from a buffer. If an
 // error occur, it is returned and the bytes read so  far are lost.
-func DecodeSimpleString(buff *bytes.Buffer) (*SimpleString, error) {
+func DecodeSimpleString(buff *bufio.Reader) (*SimpleString, error) {
 	frameContent, err := simpleStringFromBuffer(buff)
 	if err != nil {
 		return nil, err
@@ -228,8 +228,8 @@ func DecodeSimpleString(buff *bytes.Buffer) (*SimpleString, error) {
 }
 
 // simpleStringFromBuffer tries a simple string from a buffer. It error if it cannot immediately read one.
-func simpleStringFromBuffer(buff *bytes.Buffer) (string, error) {
-	frameContent, err := readUntilCRLFSimple(buff)
+func simpleStringFromBuffer(rd *bufio.Reader) (string, error) {
+	frameContent, err := readUntilCRLFSimple(rd)
 	if err != nil {
 		return "", err
 	}
@@ -244,14 +244,19 @@ func simpleStringFromBuffer(buff *bytes.Buffer) (string, error) {
 
 // readUntilCRLFSimple a string with does not contain any CR or LF until it reach.
 // It returns an error if the immediately coming string does not match the requirements.
-// The result is stripped from the CRLF. In case of an error, the bytes read are lost.
-func readUntilCRLFSimple(buff *bytes.Buffer) (string, error) {
-	if buff.Len() < 2 {
-		return "", ErrNotEnoughData
-	}
-	readBytes, err := buff.ReadBytes('\n')
+// The result is stripped from the CRLF. This function return various errors which should
+// be taken care of by the caller.
+// io.EOF when we reach the end of the stream without any CRLF
+// ErrNotEnoughData when there is less than 2 digits
+// ErrInvalidSimpleString when we encounter LF in the middle. In fact, simple string should
+// not contain any LF in the middle in our protocol.
+func readUntilCRLFSimple(rd *bufio.Reader) (string, error) {
+	readBytes, err := rd.ReadBytes('\n')
 	if err != nil {
 		return "", err
+	}
+	if len(readBytes) < 2 {
+		return "", ErrNotEnoughData
 	}
 	if readBytes[len(readBytes)-2] != '\r' {
 		return "", ErrInvalidSimpleString
@@ -261,8 +266,8 @@ func readUntilCRLFSimple(buff *bytes.Buffer) (string, error) {
 }
 
 // DecodeError decode an Error from a buffer
-func DecodeError(buff *bytes.Buffer) (*Error, error) {
-	frameContent, err := simpleStringFromBuffer(buff)
+func DecodeError(rd *bufio.Reader) (*Error, error) {
+	frameContent, err := simpleStringFromBuffer(rd)
 	if err != nil {
 		return nil, err
 	}
@@ -274,8 +279,8 @@ func DecodeError(buff *bytes.Buffer) (*Error, error) {
 }
 
 // DecodeInteger decodes an int from a buffer
-func DecodeInteger(buff *bytes.Buffer) (*Integer, error) {
-	frameContent, err := getInt(buff)
+func DecodeInteger(rd *bufio.Reader) (*Integer, error) {
+	frameContent, err := getInt(rd)
 	if err != nil {
 		return nil, err
 	}
@@ -284,8 +289,8 @@ func DecodeInteger(buff *bytes.Buffer) (*Integer, error) {
 }
 
 // getInt read an int from a buffer
-func getInt(buff *bytes.Buffer) (int, error) {
-	nextString, err := readUntilCRLFSimple(buff)
+func getInt(rd *bufio.Reader) (int, error) {
+	nextString, err := readUntilCRLFSimple(rd)
 	if err != nil {
 		return 0, err
 	}
@@ -297,12 +302,9 @@ func getInt(buff *bytes.Buffer) (int, error) {
 }
 
 // DecodeBulkString decodes a bulk string from a buffer.
-func DecodeBulkString(buff *bytes.Buffer) (*BulkString, error) {
-	if buff.Len() < 2 {
-		return nil, ErrNotEnoughData
-	}
+func DecodeBulkString(rd *bufio.Reader) (*BulkString, error) {
 	// read the size of bulk string before
-	sizeString, err := readUntilCRLFSimple(buff)
+	sizeString, err := readUntilCRLFSimple(rd)
 	if err != nil {
 		return nil, err
 	}
@@ -312,7 +314,7 @@ func DecodeBulkString(buff *bytes.Buffer) (*BulkString, error) {
 	}
 	tmpRead := make([]byte, 0, initialTemporaryBufferSize)
 	for {
-		bs, err := buff.ReadBytes('\n')
+		bs, err := rd.ReadBytes('\n')
 		if err != nil {
 			return nil, err
 		}
@@ -321,6 +323,7 @@ func DecodeBulkString(buff *bytes.Buffer) (*BulkString, error) {
 			break
 		}
 	}
+	// we already know the size, so let's compare
 	if len(tmpRead) != size+2 {
 		return nil, ErrMalformedFrame
 	}
@@ -329,8 +332,8 @@ func DecodeBulkString(buff *bytes.Buffer) (*BulkString, error) {
 }
 
 // DecodeBool decodes a bool from a buffer.
-func DecodeBool(buff *bytes.Buffer) (*Bool, error) {
-	w, err := simpleStringFromBuffer(buff)
+func DecodeBool(rd *bufio.Reader) (*Bool, error) {
+	w, err := simpleStringFromBuffer(rd)
 	if err != nil {
 		return nil, err
 	}
@@ -347,8 +350,8 @@ func DecodeBool(buff *bytes.Buffer) (*Bool, error) {
 }
 
 // DecodeNull decodes a null frame from a buffer.
-func DecodeNull(buff *bytes.Buffer) (*Null, error) {
-	w, err := simpleStringFromBuffer(buff)
+func DecodeNull(rd *bufio.Reader) (*Null, error) {
+	w, err := simpleStringFromBuffer(rd)
 	if err != nil {
 		return nil, err
 	}
@@ -358,14 +361,14 @@ func DecodeNull(buff *bytes.Buffer) (*Null, error) {
 	return &Null{}, nil
 }
 
-func DecodeArray(buff *bytes.Buffer) (*Array, error) {
-	length, err := getInt(buff)
+func DecodeArray(rd *bufio.Reader) (*Array, error) {
+	length, err := getInt(rd)
 	if err != nil {
 		return nil, err
 	}
 	array := NewArray(length)
 	for i := 0; i < length; i++ {
-		frame, err := Decode(buff)
+		frame, err := Decode(rd)
 		if err != nil {
 			return nil, err
 		}
