@@ -367,10 +367,10 @@ func DecodeArray(buff *bytes.Buffer) (*Array, error) {
 	for i := 0; i < length; i++ {
 		frame, err := Decode(buff)
 		if err != nil {
-			err := array.Append(frame)
-			if err != nil {
-				return nil, err
-			}
+			return nil, err
+		}
+		if err := array.Append(frame); err != nil {
+			return nil, err
 		}
 	}
 	return array, nil
