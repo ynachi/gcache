@@ -593,3 +593,64 @@ func TestArray_String(t *testing.T) {
 		})
 	}
 }
+
+func TestBool_DecodeArray(t *testing.T) {
+	arrayOfBulks := NewArray(2)
+	_ = arrayOfBulks.Append(&BulkString{value: "hello"})
+	_ = arrayOfBulks.Append(&BulkString{value: "world"})
+
+	arrayOfMixed := NewArray(2)
+	_ = arrayOfMixed.Append(&BulkString{value: "hello"})
+	_ = arrayOfMixed.Append(&Integer{value: 28})
+	_ = arrayOfMixed.Append(&SimpleString{value: "simple"})
+	_ = arrayOfMixed.Append(&Null{})
+	_ = arrayOfMixed.Append(&Bool{value: true})
+
+	tests := []struct {
+		name      string
+		give      *bytes.Buffer
+		wantFrame Array
+		wantErr   bool
+	}{
+		{
+			name:      "array of bulk",
+			give:      bytes.NewBufferString("2\r\n$5\r\nhello\r\n$5\r\nworld\r\n"),
+			wantFrame: *arrayOfBulks,
+			wantErr:   false,
+		},
+		{
+			name:      "array of mixed frame types",
+			give:      bytes.NewBufferString("2\r\n$5\r\nhello\r\n:28\r\n+simple\r\n_\r\n#t\r\n"),
+			wantFrame: *arrayOfMixed,
+			wantErr:   false,
+		},
+		{
+			name:      "array of mixed frame types with extra invalid data",
+			give:      bytes.NewBufferString("2\r\n$5\r\nhello\r\n:28\r\n+simple\r\n_\r\n+simple2"),
+			wantFrame: *arrayOfMixed,
+			wantErr:   false,
+		},
+		{
+			name:      "empty array",
+			give:      bytes.NewBufferString("0\r\n"),
+			wantFrame: *NewArray(0),
+			wantErr:   false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			f, err := DecodeArray(tt.give)
+			if err != nil {
+				if tt.wantErr {
+					return
+				}
+				t.Fatalf("DecodeArray() unexpected error = %v", err)
+			} else if tt.wantErr {
+				t.Fatalf("DecodeArray() expected error but got none.")
+			}
+			if !reflect.DeepEqual(*f, tt.wantFrame) {
+				t.Errorf("DecodeArray() got = %v, want %v", *f, tt.wantFrame)
+			}
+		})
+	}
+}
