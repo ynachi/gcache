@@ -1,9 +1,10 @@
 package frame
 
 import (
-	"bytes"
+	"bufio"
 	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -131,34 +132,34 @@ func TestNewSimpleString(t *testing.T) {
 	}
 }
 
-func TestSimpleString_DecodeSimpleString(t *testing.T) {
+func TestDecodeSimpleString(t *testing.T) {
 	tests := []struct {
 		name      string
-		give      *bytes.Buffer
+		give      *bufio.Reader
 		wantFrame SimpleString
 		wantErr   bool
 	}{
 		{
 			name:      "basic working frame",
-			give:      bytes.NewBufferString("hello\r\n"),
+			give:      bufio.NewReader(strings.NewReader("hello\r\n")),
 			wantFrame: SimpleString{value: "hello"},
 			wantErr:   false,
 		},
 		{
 			name:      "basic working frame with data left in the buffer",
-			give:      bytes.NewBufferString("hello\r\nworld"),
+			give:      bufio.NewReader(strings.NewReader("hello\r\nworld")),
 			wantFrame: SimpleString{value: "hello"},
 			wantErr:   false,
 		},
 		{
 			name:      "working frame should not contain CR in the middle",
-			give:      bytes.NewBufferString("hel\rlo\r\n"),
+			give:      bufio.NewReader(strings.NewReader("hel\rlo\r\n")),
 			wantFrame: SimpleString{},
 			wantErr:   true,
 		},
 		{
 			name:      "working frame should not contain LF in the middle",
-			give:      bytes.NewBufferString("hel\nlo\r\n"),
+			give:      bufio.NewReader(strings.NewReader("hel\nlo\r\n")),
 			wantFrame: SimpleString{},
 			wantErr:   true,
 		},
@@ -186,31 +187,31 @@ func TestSimpleString_DecodeSimpleString(t *testing.T) {
 func TestError_DecodeError(t *testing.T) {
 	tests := []struct {
 		name      string
-		give      *bytes.Buffer
+		give      *bufio.Reader
 		wantFrame Error
 		wantErr   bool
 	}{
 		{
 			name:      "basic working frame",
-			give:      bytes.NewBufferString("hello\r\n"),
+			give:      bufio.NewReader(strings.NewReader("hello\r\n")),
 			wantFrame: Error{value: "hello"},
 			wantErr:   false,
 		},
 		{
 			name:      "basic working frame with data left in the buffer",
-			give:      bytes.NewBufferString("hello\r\nworld"),
+			give:      bufio.NewReader(strings.NewReader("hello\r\nworld")),
 			wantFrame: Error{value: "hello"},
 			wantErr:   false,
 		},
 		{
 			name:      "working frame should not contain CR in the middle",
-			give:      bytes.NewBufferString("hel\rlo\r\n"),
+			give:      bufio.NewReader(strings.NewReader("hel\rlo\r\n")),
 			wantFrame: Error{},
 			wantErr:   true,
 		},
 		{
 			name:      "working frame should not contain LF in the middle",
-			give:      bytes.NewBufferString("hel\nlo\r\n"),
+			give:      bufio.NewReader(strings.NewReader("hel\nlo\r\n")),
 			wantFrame: Error{},
 			wantErr:   true,
 		},
@@ -304,37 +305,37 @@ func TestSimpleInteger_Serialize(t *testing.T) {
 func TestInteger_DecodeInteger(t *testing.T) {
 	tests := []struct {
 		name      string
-		give      *bytes.Buffer
+		give      *bufio.Reader
 		wantFrame Integer
 		wantErr   bool
 	}{
 		{
 			name:      "basic frame with positive number",
-			give:      bytes.NewBufferString("25\r\n"),
+			give:      bufio.NewReader(strings.NewReader("25\r\n")),
 			wantFrame: Integer{value: 25},
 			wantErr:   false,
 		},
 		{
 			name:      "basic working frame with data left in the buffer",
-			give:      bytes.NewBufferString("-25\r\nworld"),
+			give:      bufio.NewReader(strings.NewReader("-25\r\nworld")),
 			wantFrame: Integer{value: -25},
 			wantErr:   false,
 		},
 		{
 			name:      "working frame should not contain CR in the middle",
-			give:      bytes.NewBufferString("25\rlo\r\n"),
+			give:      bufio.NewReader(strings.NewReader("25\rlo\r\n")),
 			wantFrame: Integer{},
 			wantErr:   true,
 		},
 		{
 			name:      "working frame should not contain LF in the middle",
-			give:      bytes.NewBufferString("25\nlo\r\n"),
+			give:      bufio.NewReader(strings.NewReader("25\nlo\r\n")),
 			wantFrame: Integer{},
 			wantErr:   true,
 		},
 		{
 			name:      "frame data contains valid integer",
-			give:      bytes.NewBufferString("25\nlo\r\n"),
+			give:      bufio.NewReader(strings.NewReader("25\nlo\r\n")),
 			wantFrame: Integer{},
 			wantErr:   true,
 		},
@@ -404,43 +405,43 @@ func TestBulk_String(t *testing.T) {
 func TestBulkString_DecodeBulkString(t *testing.T) {
 	tests := []struct {
 		name      string
-		give      *bytes.Buffer
+		give      *bufio.Reader
 		wantFrame BulkString
 		wantErr   bool
 	}{
 		{
 			name:      "basic working frame",
-			give:      bytes.NewBufferString("5\r\nhello\r\n"),
+			give:      bufio.NewReader(strings.NewReader("5\r\nhello\r\n")),
 			wantFrame: BulkString{value: "hello"},
 			wantErr:   false,
 		},
 		{
 			name:      "basic working frame with data left in the buffer after read",
-			give:      bytes.NewBufferString("5\r\nhello\r\nworld"),
+			give:      bufio.NewReader(strings.NewReader("5\r\nhello\r\nworld")),
 			wantFrame: BulkString{value: "hello"},
 			wantErr:   false,
 		},
 		{
 			name:      "working frame can contain CR in the middle",
-			give:      bytes.NewBufferString("6\r\nhel\rlo\r\n"),
+			give:      bufio.NewReader(strings.NewReader("6\r\nhel\rlo\r\n")),
 			wantFrame: BulkString{value: "hel\rlo"},
 			wantErr:   false,
 		},
 		{
 			name:      "working frame can contain LF in the middle",
-			give:      bytes.NewBufferString("6\r\nhel\nlo\r\n"),
+			give:      bufio.NewReader(strings.NewReader("6\r\nhel\nlo\r\n")),
 			wantFrame: BulkString{value: "hel\nlo"},
 			wantErr:   false,
 		},
 		{
 			name:      "frame size does not match data size",
-			give:      bytes.NewBufferString("8\r\nhello\r\n"),
+			give:      bufio.NewReader(strings.NewReader("8\r\nhello\r\n")),
 			wantFrame: BulkString{},
 			wantErr:   true,
 		},
 		{
 			name:      "frame does not end with CRLF",
-			give:      bytes.NewBufferString("5\r\nhello\r"),
+			give:      bufio.NewReader(strings.NewReader("5\r\nhello\r")),
 			wantFrame: BulkString{},
 			wantErr:   true,
 		},
@@ -495,25 +496,25 @@ func TestBool_String(t *testing.T) {
 func TestBool_DecodeBool(t *testing.T) {
 	tests := []struct {
 		name      string
-		give      *bytes.Buffer
+		give      *bufio.Reader
 		wantFrame Bool
 		wantErr   bool
 	}{
 		{
 			name:      "get true from buffer",
-			give:      bytes.NewBufferString("t\r\n"),
+			give:      bufio.NewReader(strings.NewReader("t\r\n")),
 			wantFrame: Bool{value: true},
 			wantErr:   false,
 		},
 		{
 			name:      "get false from buffer",
-			give:      bytes.NewBufferString("f\r\nworld"),
+			give:      bufio.NewReader(strings.NewReader("f\r\nworld")),
 			wantFrame: Bool{value: false},
 			wantErr:   false,
 		},
 		{
 			name:      "invalid bool",
-			give:      bytes.NewBufferString("T\r\n"),
+			give:      bufio.NewReader(strings.NewReader("T\r\n")),
 			wantFrame: Bool{},
 			wantErr:   true,
 		},
@@ -568,21 +569,6 @@ func TestArray_String(t *testing.T) {
 			},
 			want: "*3\r\n$5\r\nhello\r\n+world\r\n:25\r\n",
 		},
-		//{
-		//	name: "a valid bulk string can be numeric",
-		//	give: "25",
-		//	want: "$2\r\n25\r\n",
-		//},
-		//{
-		//	name: "a valid bulk string can contain CR in the middle",
-		//	give: "hello\rhi",
-		//	want: "$8\r\nhello\rhi\r\n",
-		//},
-		//{
-		//	name: "a valid bulk string can contain LF in the middle",
-		//	give: "hello\nhi",
-		//	want: "$8\r\nhello\nhi\r\n",
-		//},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -594,7 +580,7 @@ func TestArray_String(t *testing.T) {
 	}
 }
 
-func TestBool_DecodeArray(t *testing.T) {
+func TestArray_DecodeArray(t *testing.T) {
 	arrayOfBulks := NewArray(2)
 	_ = arrayOfBulks.Append(&BulkString{value: "hello"})
 	_ = arrayOfBulks.Append(&BulkString{value: "world"})
@@ -608,31 +594,31 @@ func TestBool_DecodeArray(t *testing.T) {
 
 	tests := []struct {
 		name      string
-		give      *bytes.Buffer
+		give      *bufio.Reader
 		wantFrame Array
 		wantErr   bool
 	}{
 		{
 			name:      "array of bulk",
-			give:      bytes.NewBufferString("2\r\n$5\r\nhello\r\n$5\r\nworld\r\n"),
+			give:      bufio.NewReader(strings.NewReader("2\r\n$5\r\nhello\r\n$5\r\nworld\r\n")),
 			wantFrame: *arrayOfBulks,
 			wantErr:   false,
 		},
 		{
 			name:      "array of mixed frame types",
-			give:      bytes.NewBufferString("2\r\n$5\r\nhello\r\n:28\r\n+simple\r\n_\r\n#t\r\n"),
+			give:      bufio.NewReader(strings.NewReader("2\r\n$5\r\nhello\r\n:28\r\n+simple\r\n_\r\n#t\r\n")),
 			wantFrame: *arrayOfMixed,
 			wantErr:   false,
 		},
 		{
 			name:      "array of mixed frame types with extra invalid data",
-			give:      bytes.NewBufferString("2\r\n$5\r\nhello\r\n:28\r\n+simple\r\n_\r\n+simple2"),
+			give:      bufio.NewReader(strings.NewReader("2\r\n$5\r\nhello\r\n:28\r\n+simple\r\n_\r\n+simple2")),
 			wantFrame: *arrayOfMixed,
 			wantErr:   false,
 		},
 		{
 			name:      "empty array",
-			give:      bytes.NewBufferString("0\r\n"),
+			give:      bufio.NewReader(strings.NewReader("0\r\n")),
 			wantFrame: *NewArray(0),
 			wantErr:   false,
 		},
