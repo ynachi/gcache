@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"io"
 	"strconv"
 	"strings"
 )
@@ -27,6 +28,10 @@ type Framer interface {
 	// String makes a frame implement the Stringer interface. There is no such thing as nil frame.
 	// It should be considered to call any methods of this interface on a nil instance a programming error.
 	String() string
+
+	// WriteTo writes the frames as bytes to an io.Writer
+	// @TODO uncomment after implementing the method on all current frames
+	//WriteTo(w io.Writer) (int64, error)
 }
 
 // SimpleString implements Framer interface
@@ -53,6 +58,13 @@ func (s *SimpleString) String() string {
 	return fmt.Sprintf("+%s\r\n", s.value)
 }
 
+// WriteTo writes a frame to an io.reader
+func (s *SimpleString) WriteTo(w io.Writer) (int64, error) {
+	frameToBytes := s.Serialize()
+	count, err := w.Write(frameToBytes)
+	return int64(count), err
+}
+
 // Error implements Framer interface
 type Error struct {
 	value string
@@ -74,6 +86,13 @@ func (e *Error) Serialize() []byte {
 // String provides a text representation of an Error frame.
 func (e *Error) String() string {
 	return fmt.Sprintf("-%s\r\n", e.value)
+}
+
+// WriteTo writes a frame to an io.reader
+func (e *Error) WriteTo(w io.Writer) (int64, error) {
+	frameToBytes := e.Serialize()
+	count, err := w.Write(frameToBytes)
+	return int64(count), err
 }
 
 // Integer implements Framer interface
