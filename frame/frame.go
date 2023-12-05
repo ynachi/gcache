@@ -65,6 +65,11 @@ func (s *SimpleString) WriteTo(w io.Writer) (int64, error) {
 	return int64(count), err
 }
 
+// Value returns the value associated with the simple string
+func (s *SimpleString) Value() string {
+	return s.value
+}
+
 // Error implements Framer interface
 type Error struct {
 	value string
@@ -123,6 +128,11 @@ func (b *BulkString) Serialize() []byte {
 // String provides a text representation of an BulkString frame.
 func (b *BulkString) String() string {
 	return fmt.Sprintf("$%d\r\n%s\r\n", len(b.value), b.value)
+}
+
+// Value returns the value associated with the simple string
+func (b *BulkString) Value() string {
+	return b.value
 }
 
 // Bool implements Framer interface.
@@ -190,6 +200,15 @@ func (a *Array) String() string {
 		sb.WriteString(f.String())
 	}
 	return sb.String()
+}
+
+func (a *Array) Size() int {
+	return a.size
+}
+
+// Get return the Frame at position i in the Array. It would panic if the index is out of bounds.
+func (a *Array) Get(i int) Framer {
+	return a.value[i]
 }
 
 func (a *Array) Serialize() []byte {
