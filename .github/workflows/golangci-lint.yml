@@ -24,11 +24,6 @@ jobs:
         uses: golangci/golangci-lint-action@v3
         with:
           version: v1.54
-          skip-dirs:
-            - dbr
-            - .fleet
-            - .idea
-            - .github
 
           # Optional: working directory, useful for monorepos
           # working-directory: somedir
