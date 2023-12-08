@@ -14,6 +14,8 @@ import (
 	"time"
 )
 
+var ErrNotAGcacheCommand = errors.New("command should be an Array frame")
+
 type Server struct {
 	address  string
 	listener net.Listener
@@ -46,16 +48,21 @@ func (c Connection) Close() error {
 	return c.conn.Close()
 }
 
-type LogLevel int
+const (
+	LevelDebug = "DEBUG"
+	LevelInfo  = "INFO"
+	LevelWarn  = "WARN"
+	LevelError = "ERROR"
+)
 
 // getLogLevel associates a log level to a string.
 func getLogLevel(level string) slog.Level {
 	switch level {
-	case "WARN", "Warn", "warn", "Warning", "WARNING":
+	case LevelWarn:
 		return slog.LevelWarn
-	case "ERROR", "Error":
+	case LevelError:
 		return slog.LevelError
-	case "DEBUG", "Debug":
+	case LevelDebug:
 		return slog.LevelDebug
 	default:
 		return slog.LevelInfo
@@ -71,19 +78,19 @@ func NewServer(ip string, port int, logLevel string) (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Server{
+	server := &Server{
 		address:  listener.Addr().String(),
 		listener: listener,
-		logger:   newLogger(logLevel),
-	}, nil
+	}
+	server.setLogger(logLevel)
+	return server, nil
 }
 
-// newLogger returns a new logger with default level.
-// The level is typically set via environment variable.
-func newLogger(level string) *slog.Logger {
+// setLogger configures a logger for the server.
+func (s *Server) setLogger(level string) {
 	opts := slog.HandlerOptions{Level: getLogLevel(level)}
 	handler := slog.NewJSONHandler(os.Stdout, &opts)
-	return slog.New(handler)
+	s.logger = slog.New(handler)
 }
 
 func (s *Server) Address() string {
@@ -134,69 +141,71 @@ func (s *Server) Start(ctx context.Context) {
 	}
 }
 
+// attemptCloseConnection tries to close a connection and log an error if it cannot.
+func (s *Server) attemptCloseConnection(conn Connection) {
+	if err := conn.Close(); err != nil {
+		s.logger.Error("error closing connection", "error", err)
+	}
+}
+
 // handleConnection is the starting point of each connection established with the server.
 // It reads commands from the connection, apply them and send the response back to the client.
 func (s *Server) handleConnection(ctx context.Context, conn Connection) {
-	defer func(conn Connection) {
-		err := conn.Close()
-		if err != nil {
-			s.logger.Error("error closing connection", "error", err)
-		}
-	}(conn)
-
+	defer s.attemptCloseConnection(conn)
 	for {
 		select {
 		case <-ctx.Done():
 			s.logger.Debug("initiating graceful termination", "client_ip", conn.clientIP)
-			// Done means the connection was dropped or the client is done, so immediately return
-			err := conn.Close()
-			if err != nil {
-				s.logger.Error("error closing connection", "error", err)
-			}
 			return
-
 		default:
 			// Commands are sent through Array type frame.
 			// Read and process them.
-			cmdFrame, err := frame.Decode(conn.reader)
-			//
-			if err != nil {
-				if errors.Is(err, io.EOF) {
-					s.logger.Debug("client initiated shutdown", "client_ip", conn.clientIP)
-					return
-				}
-				const errMsg = "command should be an Array frame"
-				s.logger.Error(errMsg, "client_ip", conn.clientIP, "cmd", "Nil")
-				s.SendError(errMsg, conn.writer)
-				continue
-			}
-			switch frameType := cmdFrame.(type) {
-			case *frame.Array:
-				// Process the command
-				s.logger.Debug("command received", "client_ip", conn.clientIP, "cmd", frameType.String())
-				cmdName, err := commands.GetCmdName(frameType)
-				if err != nil {
-					s.logger.Error("frame is not a valid gcache command", "client_ip", conn.clientIP, "cmd", frameType.String())
-					s.SendError(err.Error(), conn.writer)
-					continue
-				}
-				// Create the right command type based on its name
-				cmd := commands.NewCommand(cmdName)
-
-				err = cmd.FromFrame(frameType)
-				if err != nil {
-					s.logger.Error("failed to decode command from Frame", "client_ip", conn.clientIP, "cmd", frameType.String())
-					s.SendError(err.Error(), conn.writer)
-					continue
-				}
-				cmd.Apply(nil, conn.writer)
-			default:
-				const errMsg = "command should be an Array frame"
-				s.logger.Error(errMsg, "client_ip", conn.clientIP, "cmd", frameType.String())
-				s.SendError(errMsg, conn.writer)
-				continue
-			}
+			s.handleCommand(conn)
 		}
+	}
+}
+
+func (s *Server) handleCommand(conn Connection) {
+	cmdFrame, err := frame.Decode(conn.reader)
+	if err != nil {
+		s.handleError(conn, err, err.Error(), "")
+		return
+	}
+	arrayFrame, ok := cmdFrame.(*frame.Array)
+	if !ok {
+		s.handleError(conn, ErrNotAGcacheCommand, ErrNotAGcacheCommand.Error(), "")
+		return
+	}
+	s.logger.Debug("command received", "client_ip", conn.clientIP, "cmd", arrayFrame.String())
+	cmd, err := s.getCommand(arrayFrame)
+	if err != nil {
+		s.handleError(conn, err, err.Error(), arrayFrame.String())
+		return
+	}
+	cmd.Apply(nil, conn.writer)
+}
+
+func (s *Server) getCommand(f *frame.Array) (commands.Command, error) {
+	cmdName, err := commands.GetCmdName(f)
+	if err != nil {
+		return nil, err
+	}
+	cmd := commands.NewCommand(cmdName)
+	err = cmd.FromFrame(f)
+	if err != nil {
+		return nil, err
+	}
+	return cmd, nil
+}
+
+// handleError is a helper process errors and send feedbacks to the client if needed.
+// message is used to send a meaningful error message to the client instead of the original error message.
+func (s *Server) handleError(conn Connection, err error, message string, command string) {
+	if errors.Is(err, io.EOF) {
+		s.logger.Debug("client initiated shutdown", "client_ip", conn.clientIP)
+	} else {
+		s.logger.Error(message, "client_ip", conn.clientIP, "cmd", command)
+		s.SendError(message, conn.writer)
 	}
 }
 
