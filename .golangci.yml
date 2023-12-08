@@ -21,3 +21,28 @@ run:
     - .fleet
     - .github
     - idea
+
+linters:
+  enable:
+    - decorder
+#    - depguard
+    - errcheck
+    - errorlint
+    - exportloopref
+    - exhaustive
+#    - gci
+    - gocritic
+    - gofmt
+    - goimports
+    - gosec
+    - govet
+    - misspell
+    - predeclared
+    - reassign
+    - revive
+    - staticcheck
+    - tenv
+    - unconvert
+    - unparam
+    - unused
+    - wastedassign
