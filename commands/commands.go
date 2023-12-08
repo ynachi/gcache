@@ -30,7 +30,7 @@ var RegisteredCommandName = map[string]struct{}{
 }
 
 // NewCommand instantiates a concrete command type base on its name. NewCommand should rely on
-// GetCmdName to extract the command name from an Array frame in most case. This sould avoid to
+// GetCmdName to extract the command name from an Array frame in most case. This should avoid to
 // return a nil command struct.
 func NewCommand(cmdName string) Command {
 	switch cmdName {

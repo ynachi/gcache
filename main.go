@@ -20,6 +20,7 @@ func main() {
 		fmt.Printf("Error creating server %v", err)
 		os.Exit(1)
 	}
+	fmt.Println(srv.Address())
 	go srv.Start(ctx)
 
 	// Wait for a shutdown signal

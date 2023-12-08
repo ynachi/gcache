@@ -3,6 +3,7 @@ package server
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ynachi/gcache/commands"
 	"github.com/ynachi/gcache/frame"
@@ -14,8 +15,7 @@ import (
 )
 
 type Server struct {
-	ip       string
-	port     int
+	address  string
 	listener net.Listener
 	logger   *slog.Logger
 }
@@ -72,8 +72,7 @@ func NewServer(ip string, port int, logLevel string) (*Server, error) {
 		return nil, err
 	}
 	return &Server{
-		ip:       ip,
-		port:     port,
+		address:  listener.Addr().String(),
 		listener: listener,
 		logger:   newLogger(logLevel),
 	}, nil
@@ -85,6 +84,10 @@ func newLogger(level string) *slog.Logger {
 	opts := slog.HandlerOptions{Level: getLogLevel(level)}
 	handler := slog.NewJSONHandler(os.Stdout, &opts)
 	return slog.New(handler)
+}
+
+func (s *Server) Address() string {
+	return s.address
 }
 
 func (s *Server) Start(ctx context.Context) {
@@ -160,7 +163,7 @@ func (s *Server) handleConnection(ctx context.Context, conn Connection) {
 			cmdFrame, err := frame.Decode(conn.reader)
 			//
 			if err != nil {
-				if err == io.EOF {
+				if errors.Is(err, io.EOF) {
 					s.logger.Debug("client initiated shutdown", "client_ip", conn.clientIP)
 					return
 				}
@@ -179,8 +182,9 @@ func (s *Server) handleConnection(ctx context.Context, conn Connection) {
 					s.SendError(err.Error(), conn.writer)
 					continue
 				}
-				// No need to check for nil as it cannot be when we use GetCmdName to extract the command name
+				// Create the right command type based on its name
 				cmd := commands.NewCommand(cmdName)
+
 				err = cmd.FromFrame(frameType)
 				if err != nil {
 					s.logger.Error("failed to decode command from Frame", "client_ip", conn.clientIP, "cmd", frameType.String())

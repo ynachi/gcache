@@ -31,7 +31,7 @@ type Framer interface {
 
 	// WriteTo writes the frames as bytes to an io.Writer
 	// @TODO uncomment after implementing the method on all current frames
-	//WriteTo(w io.Writer) (int64, error)
+	// WriteTo(w io.Writer) (int64, error)
 }
 
 // SimpleString implements Framer interface
@@ -120,6 +120,11 @@ type BulkString struct {
 	value string
 }
 
+// NewBulkString returns a new bulk string.
+func NewBulkString(value string) *BulkString {
+	return &BulkString{value: value}
+}
+
 // Serialize turns the frame into a slice of byte for transfer over a network stream.
 func (b *BulkString) Serialize() []byte {
 	return []byte(b.value)
@@ -147,7 +152,7 @@ func (b *Bool) Serialize() []byte {
 
 // String provides a text representation of a Bool frame.
 func (b *Bool) String() string {
-	if b.value == true {
+	if b.value {
 		return "#t\r\n"
 	}
 	return "#f\r\n"
@@ -416,43 +421,3 @@ func DecodeArray(rd *bufio.Reader) (*Array, error) {
 	}
 	return array, nil
 }
-
-// example to decode frames based on the type
-//
-//
-// Define your Framer interface
-//type Framer interface {
-//	Deserialize(b *bytes.Buffer) error
-//	// other methods...
-//}
-//
-//// Suppose you have two different frame types
-//type FrameType1 struct { /* fields */ }
-//type FrameType2 struct { /* fields */ }
-//
-//// You define Deserialize differently for each type
-//func (f *FrameType1) Deserialize(b *bytes.Buffer) error {
-//	// deserialization for FrameType1
-//	// ...
-//	return nil
-//}
-//
-//func (f *FrameType2) Deserialize(b *bytes.Buffer) error {
-//	// deserialization for FrameType2
-//	// ...
-//	return nil
-//}
-//
-//// Then, in your function dealing with the incoming data
-//switch frameTypeByte {
-//case byte1:
-//frame := &FrameType1{}
-//err := frame.Deserialize(b)
-//// handle error and use the frame
-//case byte2:
-//frame := &FrameType2{}
-//err := frame.Deserialize(b)
-//// handle error and use the frame
-//default:
-//// handle error: unrecognized frame type
-//}
