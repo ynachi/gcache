@@ -41,5 +41,4 @@ func main() {
 	<-closed
 	fmt.Println("server shutdown complete")
 	os.Exit(0)
-
 }

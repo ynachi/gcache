@@ -7,7 +7,7 @@ import (
 	"github.com/ynachi/gcache/frame"
 )
 
-// Add all the command errors here
+// Add all the command errors here.
 var (
 	ErrInvalidPingCommand = errors.New("ping command is malformed")
 	ErrNotGcacheCmd       = errors.New("this frame is not a gcache command")
@@ -15,7 +15,7 @@ var (
 	ErrInvalidCmdName = errors.New("command not found")
 )
 
-// Command represents a command issued to the cache server with their args
+// Command represents a command issued to the cache server with their args.
 type Command interface {
 	// Apply applies the command et write back the response to the client
 	Apply(db db.Database, dest *bufio.Writer)
@@ -41,7 +41,7 @@ func NewCommand(cmdName string) Command {
 	}
 }
 
-// GetCmdName gets a command name from a Frame Array
+// GetCmdName gets a command name from a Frame Array.
 func GetCmdName(f *frame.Array) (string, error) {
 	if f.Size() < 1 {
 		return "", ErrNotGcacheCmd

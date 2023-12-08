@@ -24,25 +24,14 @@ run:
 
 linters:
   enable:
-    - decorder
-#    - depguard
-    - errcheck
-    - errorlint
-    - exportloopref
-    - exhaustive
-#    - gci
-    - gocritic
+    - gci
+    - godot
     - gofmt
-    - goimports
-    - gosec
-    - govet
     - misspell
-    - predeclared
-    - reassign
-    - revive
-    - staticcheck
-    - tenv
-    - unconvert
-    - unparam
-    - unused
-    - wastedassign
+    - whitespace
+linters-settings:
+  gci:
+    sections:
+      - standard
+      - default
+#      - prefix(github.com/ynachi/gcache)

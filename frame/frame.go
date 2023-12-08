@@ -34,7 +34,7 @@ type Framer interface {
 	// WriteTo(w io.Writer) (int64, error)
 }
 
-// SimpleString implements Framer interface
+// SimpleString implements Framer interface.
 type SimpleString struct {
 	value string
 }
@@ -58,19 +58,19 @@ func (s *SimpleString) String() string {
 	return fmt.Sprintf("+%s\r\n", s.value)
 }
 
-// WriteTo writes a frame to an io.reader
+// WriteTo writes a frame to an io.reader.
 func (s *SimpleString) WriteTo(w io.Writer) (int64, error) {
 	frameToBytes := s.Serialize()
 	count, err := w.Write(frameToBytes)
 	return int64(count), err
 }
 
-// Value returns the value associated with the simple string
+// Value returns the value associated with the simple string.
 func (s *SimpleString) Value() string {
 	return s.value
 }
 
-// Error implements Framer interface
+// Error implements Framer interface.
 type Error struct {
 	value string
 }
@@ -93,14 +93,14 @@ func (e *Error) String() string {
 	return fmt.Sprintf("-%s\r\n", e.value)
 }
 
-// WriteTo writes a frame to an io.reader
+// WriteTo writes a frame to an io.reader.
 func (e *Error) WriteTo(w io.Writer) (int64, error) {
 	frameToBytes := e.Serialize()
 	count, err := w.Write(frameToBytes)
 	return int64(count), err
 }
 
-// Integer implements Framer interface
+// Integer implements Framer interface.
 type Integer struct {
 	value int64
 }
@@ -115,7 +115,7 @@ func (i *Integer) String() string {
 	return fmt.Sprintf(":%s\r\n", strconv.Itoa(int(i.value)))
 }
 
-// BulkString implements Framer interface
+// BulkString implements Framer interface.
 type BulkString struct {
 	value string
 }
@@ -135,7 +135,7 @@ func (b *BulkString) String() string {
 	return fmt.Sprintf("$%d\r\n%s\r\n", len(b.value), b.value)
 }
 
-// Value returns the value associated with the simple string
+// Value returns the value associated with the simple string.
 func (b *BulkString) Value() string {
 	return b.value
 }
@@ -158,7 +158,7 @@ func (b *Bool) String() string {
 	return "#f\r\n"
 }
 
-// Null frame
+// Null frame.
 type Null struct{}
 
 func (n *Null) Serialize() []byte {
@@ -308,7 +308,7 @@ func readUntilCRLFSimple(rd *bufio.Reader) (string, error) {
 	return simpleString, nil
 }
 
-// DecodeError decode an Error from a buffer
+// DecodeError decode an Error from a buffer.
 func DecodeError(rd *bufio.Reader) (*Error, error) {
 	frameContent, err := simpleStringFromBuffer(rd)
 	if err != nil {
@@ -321,7 +321,7 @@ func DecodeError(rd *bufio.Reader) (*Error, error) {
 	return e, nil
 }
 
-// DecodeInteger decodes an int from a buffer
+// DecodeInteger decodes an int from a buffer.
 func DecodeInteger(rd *bufio.Reader) (*Integer, error) {
 	frameContent, err := getInt(rd)
 	if err != nil {
@@ -331,7 +331,7 @@ func DecodeInteger(rd *bufio.Reader) (*Integer, error) {
 	return &i, nil
 }
 
-// getInt read an int from a buffer
+// getInt read an int from a buffer.
 func getInt(rd *bufio.Reader) (int, error) {
 	nextString, err := readUntilCRLFSimple(rd)
 	if err != nil {

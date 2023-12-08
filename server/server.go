@@ -29,7 +29,7 @@ type Connection struct {
 	clientIP string
 }
 
-// MakeConnection creates a connection from a net.Conn object
+// MakeConnection creates a connection from a net.Conn object.
 func MakeConnection(c net.Conn) Connection {
 	return Connection{
 		reader:   bufio.NewReader(c),
@@ -118,7 +118,6 @@ func (s *Server) Start(ctx context.Context) {
 
 	for {
 		select {
-
 		case <-ctx.Done():
 			// Close all connections
 			s.logger.Info("gracefully shutdown server")
@@ -147,7 +146,6 @@ func (s *Server) handleConnection(ctx context.Context, conn Connection) {
 
 	for {
 		select {
-
 		case <-ctx.Done():
 			s.logger.Debug("initiating graceful termination", "client_ip", conn.clientIP)
 			// Done means the connection was dropped or the client is done, so immediately return
