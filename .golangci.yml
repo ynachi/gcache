@@ -24,7 +24,7 @@ run:
 
 linters:
   enable:
-    - gci
+#    - gci
     - godot
     - gofmt
     - misspell

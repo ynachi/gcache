@@ -53,3 +53,7 @@ func (c *Ping) String() string {
 	bs := frame.NewBulkString(c.message)
 	return bs.String()
 }
+
+func (c *Ping) SetMessage(message string) {
+	c.message = message
+}

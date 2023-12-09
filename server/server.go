@@ -22,7 +22,6 @@ type Server struct {
 
 const (
 	LevelDebug = "DEBUG"
-	LevelInfo  = "INFO"
 	LevelWarn  = "WARN"
 	LevelError = "ERROR"
 )
@@ -135,7 +134,7 @@ func (s *Server) handleConnection(ctx context.Context, conn Connection) {
 			return
 		default:
 			// Get command first
-			cmd, err := s.getCommand(conn)
+			cmd, err := getCommand(conn.reader)
 			if err != nil {
 				// EOF means the client is done, so exit.
 				if errors.Is(err, io.EOF) {
@@ -143,7 +142,7 @@ func (s *Server) handleConnection(ctx context.Context, conn Connection) {
 					return
 				}
 				s.logger.Error("error while handling command", "client_ip", conn.clientIP, "err", err)
-				s.SendError(err.Error(), conn)
+				s.SendError(err.Error(), conn.writer)
 				continue
 			}
 
@@ -155,16 +154,16 @@ func (s *Server) handleConnection(ctx context.Context, conn Connection) {
 }
 
 // getCommand handles a command received by the server over an established connection.
-func (s *Server) getCommand(conn Connection) (command.Command, error) {
-	cmdFrameArray, err := s.getFrameArray(conn)
+func getCommand(r *bufio.Reader) (command.Command, error) {
+	cmdFrameArray, err := getFrameArray(r)
 	if err != nil {
 		return nil, err
 	}
-	return s.parseCommandFromFrame(cmdFrameArray)
+	return parseCommandFromFrame(cmdFrameArray)
 }
 
 // parseCommandFromFrame extracts a command from a frame array.
-func (s *Server) parseCommandFromFrame(f *frame.Array) (command.Command, error) {
+func parseCommandFromFrame(f *frame.Array) (command.Command, error) {
 	cmdName, err := command.GetCmdName(f)
 	if err != nil {
 		return nil, err
@@ -177,9 +176,10 @@ func (s *Server) parseCommandFromFrame(f *frame.Array) (command.Command, error) 
 	return cmd, nil
 }
 
-func (s *Server) getFrameArray(conn Connection) (*frame.Array, error) {
-	var ErrNotAGcacheCommand = errors.New("command should be an Array frame")
-	cmdFrame, err := frame.Decode(conn.reader)
+var ErrNotAGcacheCommand = errors.New("command should be an Array frame")
+
+func getFrameArray(r *bufio.Reader) (*frame.Array, error) {
+	cmdFrame, err := frame.Decode(r)
 	if err != nil {
 		return nil, err
 	}
@@ -187,23 +187,22 @@ func (s *Server) getFrameArray(conn Connection) (*frame.Array, error) {
 	if !ok {
 		return nil, ErrNotAGcacheCommand
 	}
-	s.logger.Debug("command received", "client_ip", conn.clientIP, "cmd", arrayFrame.String())
 	return arrayFrame, nil
 }
 
 // SendError responds to a client with an error.
 // The error message should be compatible with RESP Error type (i.e., Simple String).
-func (s *Server) SendError(msg string, conn Connection) {
+func (s *Server) SendError(msg string, w *bufio.Writer) {
 	defer func(conn *bufio.Writer) {
 		if err := conn.Flush(); err != nil {
 			s.logger.Error("failed to flush buffer to writer", "error", err)
 		}
-	}(conn.writer)
+	}(w)
 	errFrame, err := frame.NewError(msg)
 	if err != nil {
 		s.logger.Error("error creating error frame", "error", err)
 	}
-	_, err = errFrame.WriteTo(conn.writer)
+	_, err = errFrame.WriteTo(w)
 	if err != nil {
 		s.logger.Error("error writing error frame to network", "error", err)
 	}

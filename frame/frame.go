@@ -14,6 +14,7 @@ var (
 	ErrInvalidError        = errors.New("input contains invalid characters (CR or LF)")
 	ErrMalformedFrame      = errors.New("unable to decode a valid frame from data")
 	ErrArrayIsFull         = errors.New("array reached its maximum capacity")
+	ErrUnknownFrameType    = errors.New("unknown frame type")
 )
 
 // initialTemporaryBufferSize is the initial size of temporary buffers used in Deserialize methods.
@@ -66,7 +67,7 @@ func Decode(rd *bufio.Reader) (Framer, error) {
 	case '*':
 		return DecodeArray(rd)
 	default:
-		return nil, fmt.Errorf("unknown frameID: %v", frameID)
+		return nil, ErrUnknownFrameType
 	}
 }
 
