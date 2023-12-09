@@ -5,7 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/ynachi/gcache/commands"
+	"github.com/ynachi/gcache/command"
 	"github.com/ynachi/gcache/frame"
 	"io"
 	"log/slog"
@@ -95,7 +95,7 @@ func (s *Server) Address() string {
 	return s.address
 }
 
-// Start starts the server. It initiates connections handling and commands processing.
+// Start starts the server. It initiates connections handling and command processing.
 func (s *Server) Start(ctx context.Context) {
 	defer func() {
 		if err := s.listener.Close(); err != nil {
@@ -151,7 +151,7 @@ func (s *Server) attemptCloseConnection(conn Connection) {
 }
 
 // handleConnection is the starting point of each connection established with the server.
-// It reads commands from the connection, apply them and send the response back to the client.
+// It reads command from the connection, apply them and send the response back to the client.
 func (s *Server) handleConnection(ctx context.Context, conn Connection) {
 	defer s.attemptCloseConnection(conn)
 	for {
@@ -190,12 +190,12 @@ func (s *Server) handleCommand(conn Connection) {
 }
 
 // getCommand extracts a command from a frame array.
-func (s *Server) getCommand(f *frame.Array) (commands.Command, error) {
-	cmdName, err := commands.GetCmdName(f)
+func (s *Server) getCommand(f *frame.Array) (command.Command, error) {
+	cmdName, err := command.GetCmdName(f)
 	if err != nil {
 		return nil, err
 	}
-	cmd := commands.NewCommand(cmdName)
+	cmd := command.NewCommand(cmdName)
 	err = cmd.FromFrame(f)
 	if err != nil {
 		return nil, err

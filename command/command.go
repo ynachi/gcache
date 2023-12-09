@@ -1,4 +1,4 @@
-package commands
+package command
 
 import (
 	"bufio"
@@ -20,7 +20,7 @@ type Command interface {
 	// Apply applies the command et write back the response to the client
 	Apply(db db.Database, dest *bufio.Writer)
 
-	// FromFrame form the commands from a Frame
+	// FromFrame form the command from a Frame
 	FromFrame(f *frame.Array) error
 }
 
