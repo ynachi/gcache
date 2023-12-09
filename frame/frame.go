@@ -20,11 +20,11 @@ var (
 const initialTemporaryBufferSize = 1024
 
 type Framer interface {
-	// Serialize returns a slice of bytes representation of this frame. It produces a slice of bytes
-	// readies to be transferred other the network.
+	// Serialize returns a slice of bytes' representation of this frame.
+	// It produces a slice of bytes that is ready to be transferred other the network.
 	Serialize() []byte
 
-	// Stringer needs to be implemented to provides a string representation of a frame.
+	// Stringer needs to be implemented to provide a string representation of a frame.
 	fmt.Stringer
 
 	// WriteTo writes the frames as bytes to an io.Writer
@@ -33,16 +33,18 @@ type Framer interface {
 }
 
 // Decode tries to read a frame from a buffer. It returns an error if no frame
-// can be read from the buffer. In case an error occur, the bytes read until the
+// can be read from the buffer.
+// In case an error occurs, the bytes read before getting the
 // error are discarded. The reason to discard is that the buffer is reused to
-// read multiple frames. So if there is an invalid frame, discarding it give the
+// read multiple frames.
+// So if there is an invalid frame, discarding it gives the
 // chance to read a good one in subsequent calls. Also note that the buffer is
 // supposed to be filled with stream of data. Lastly, after a successful read,
 // the read cursor is positioned after the bytes read for subsequent reads. Care
 // should be taken to check the incoming frame type before calling Deserialize as
-// bytes read upon error are lost. Decode relies on some decoding function define
-// at frames level. For instance, when decode identify that it need to decode a simple
-// string Frame, it would call DecodeSimpleString.
+// bytes read upon error are lost.
+// Decode relies on some decoding function defined at frames' level. For instance, when decode identify that it
+// needs to decode a simple string Frame, it would call DecodeSimpleString.
 func Decode(rd *bufio.Reader) (Framer, error) {
 	frameID, err := rd.ReadByte()
 	if err != nil {
@@ -69,7 +71,7 @@ func Decode(rd *bufio.Reader) (Framer, error) {
 }
 
 // DecodeSimpleString consume a simple string from a buffer. If an
-// error occur, it is returned and the bytes read so  far are lost.
+// error occurs, it is returned, and the bytes read so far are lost.
 func DecodeSimpleString(buff *bufio.Reader) (*SimpleString, error) {
 	frameContent, err := simpleStringFromBuffer(buff)
 	if err != nil {
@@ -88,7 +90,7 @@ func simpleStringFromBuffer(rd *bufio.Reader) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	// if there is any CR in the middle of the string,
+	// If there is any CR in the middle of the string,
 	// it is not a frame of type simple string. We do not double-check for LF
 	// because from the first read, we are guaranteed to not have any LF in the middle
 	if strings.ContainsRune(frameContent, '\r') {
@@ -99,12 +101,12 @@ func simpleStringFromBuffer(rd *bufio.Reader) (string, error) {
 
 // readUntilCRLFSimple a string with does not contain any CR or LF until it reach.
 // It returns an error if the immediately coming string does not match the requirements.
-// The result is stripped from the CRLF. This function return various errors which should
-// be taken care of by the caller.
-// io.EOF when we reach the end of the stream without any CRLF
-// ErrNotEnoughData when there is less than 2 digits
-// ErrInvalidSimpleString when we encounter LF in the middle. In fact, simple string should
-// not contain any LF in the middle in our protocol.
+// The result is stripped from the CRLF.
+// This function returns various errors which should be taken care of by the caller.
+// Io.EOF when we reach the end of the stream without any CRLF
+// ErrNotEnoughData when there are less than two digits
+// ErrInvalidSimpleString when we encounter LF in the middle.
+// In fact, simple string should not contain any LF in the middle of our protocol.
 func readUntilCRLFSimple(rd *bufio.Reader) (string, error) {
 	readBytes, err := rd.ReadBytes('\n')
 	if err != nil {

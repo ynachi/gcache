@@ -42,9 +42,14 @@ func (c *Ping) FromFrame(f *frame.Array) error {
 	case f.Size() == 1:
 		c.message = "PONG"
 	default:
-		// GetCmdName already check frame type
+		// GetCmdName already check a frame type
 		s := f.Get(1).(*frame.BulkString)
 		c.message = s.Value()
 	}
 	return nil
+}
+
+func (c *Ping) String() string {
+	bs := frame.NewBulkString(c.message)
+	return bs.String()
 }

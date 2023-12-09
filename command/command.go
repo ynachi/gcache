@@ -3,6 +3,7 @@ package command
 import (
 	"bufio"
 	"errors"
+	"fmt"
 	"github.com/ynachi/gcache/db"
 	"github.com/ynachi/gcache/frame"
 )
@@ -17,6 +18,8 @@ var (
 
 // Command represents a command issued to the cache server with their args.
 type Command interface {
+	fmt.Stringer
+
 	// Apply applies the command et write back the response to the client
 	Apply(db db.Database, dest *bufio.Writer)
 

@@ -20,32 +20,6 @@ type Server struct {
 	logger   *slog.Logger
 }
 
-// Connection is a helper struct which help propagates embedded the treader and writer of a connection while
-// allowing top propagates information about this connection.
-type Connection struct {
-	conn     net.Conn
-	reader   *bufio.Reader
-	writer   *bufio.Writer
-	clientIP string
-}
-
-// MakeConnection creates a connection from a net.Conn object.
-func MakeConnection(c net.Conn) Connection {
-	return Connection{
-		reader:   bufio.NewReader(c),
-		writer:   bufio.NewWriter(c),
-		clientIP: c.RemoteAddr().String(),
-		conn:     c,
-	}
-}
-
-func (c Connection) Close() error {
-	if err := c.writer.Flush(); err != nil {
-		return err
-	}
-	return c.conn.Close()
-}
-
 const (
 	LevelDebug = "DEBUG"
 	LevelInfo  = "INFO"
@@ -160,37 +134,37 @@ func (s *Server) handleConnection(ctx context.Context, conn Connection) {
 			s.logger.Debug("initiating graceful termination", "client_ip", conn.clientIP)
 			return
 		default:
-			// Commands are sent through Array type frame.
-			// Read and process them.
-			s.handleCommand(conn)
+			// Get command first
+			cmd, err := s.getCommand(conn)
+			if err != nil {
+				// EOF means the client is done, so exit.
+				if errors.Is(err, io.EOF) {
+					s.logger.Debug("client initiated shutdown", "client_ip", conn.clientIP)
+					return
+				}
+				s.logger.Error("error while handling command", "client_ip", conn.clientIP, "err", err)
+				s.SendError(err.Error(), conn)
+				continue
+			}
+
+			// Apply command
+			s.logger.Debug("command received", "client_ip", conn.clientIP, "cmd", cmd.String())
+			cmd.Apply(nil, conn.writer)
 		}
 	}
 }
 
-// handleCommand handles a command received by the server over an established connection.
-func (s *Server) handleCommand(conn Connection) {
-	var ErrNotAGcacheCommand = errors.New("command should be an Array frame")
-	cmdFrame, err := frame.Decode(conn.reader)
+// getCommand handles a command received by the server over an established connection.
+func (s *Server) getCommand(conn Connection) (command.Command, error) {
+	cmdFrameArray, err := s.getFrameArray(conn)
 	if err != nil {
-		s.handleError(conn, err, err.Error(), "")
-		return
+		return nil, err
 	}
-	arrayFrame, ok := cmdFrame.(*frame.Array)
-	if !ok {
-		s.handleError(conn, ErrNotAGcacheCommand, ErrNotAGcacheCommand.Error(), "")
-		return
-	}
-	s.logger.Debug("command received", "client_ip", conn.clientIP, "cmd", arrayFrame.String())
-	cmd, err := s.getCommand(arrayFrame)
-	if err != nil {
-		s.handleError(conn, err, err.Error(), arrayFrame.String())
-		return
-	}
-	cmd.Apply(nil, conn.writer)
+	return s.parseCommandFromFrame(cmdFrameArray)
 }
 
-// getCommand extracts a command from a frame array.
-func (s *Server) getCommand(f *frame.Array) (command.Command, error) {
+// parseCommandFromFrame extracts a command from a frame array.
+func (s *Server) parseCommandFromFrame(f *frame.Array) (command.Command, error) {
 	cmdName, err := command.GetCmdName(f)
 	if err != nil {
 		return nil, err
@@ -203,31 +177,33 @@ func (s *Server) getCommand(f *frame.Array) (command.Command, error) {
 	return cmd, nil
 }
 
-// handleError is a helper process errors and send feedbacks to the client if needed.
-// message is used to send a meaningful error message to the client instead of the original error message.
-// EOF means the client is done. We don't need to send feedback in such cases.
-func (s *Server) handleError(conn Connection, err error, message string, command string) {
-	if errors.Is(err, io.EOF) {
-		s.logger.Debug("client initiated shutdown", "client_ip", conn.clientIP)
-	} else {
-		s.logger.Error(message, "client_ip", conn.clientIP, "cmd", command)
-		s.SendError(message, conn.writer)
+func (s *Server) getFrameArray(conn Connection) (*frame.Array, error) {
+	var ErrNotAGcacheCommand = errors.New("command should be an Array frame")
+	cmdFrame, err := frame.Decode(conn.reader)
+	if err != nil {
+		return nil, err
 	}
+	arrayFrame, ok := cmdFrame.(*frame.Array)
+	if !ok {
+		return nil, ErrNotAGcacheCommand
+	}
+	s.logger.Debug("command received", "client_ip", conn.clientIP, "cmd", arrayFrame.String())
+	return arrayFrame, nil
 }
 
 // SendError responds to a client with an error.
-// The error message should be compatible to RESP Error type (i.e. Simple String).
-func (s *Server) SendError(msg string, conn *bufio.Writer) {
+// The error message should be compatible with RESP Error type (i.e., Simple String).
+func (s *Server) SendError(msg string, conn Connection) {
 	defer func(conn *bufio.Writer) {
 		if err := conn.Flush(); err != nil {
 			s.logger.Error("failed to flush buffer to writer", "error", err)
 		}
-	}(conn)
+	}(conn.writer)
 	errFrame, err := frame.NewError(msg)
 	if err != nil {
 		s.logger.Error("error creating error frame", "error", err)
 	}
-	_, err = errFrame.WriteTo(conn)
+	_, err = errFrame.WriteTo(conn.writer)
 	if err != nil {
 		s.logger.Error("error writing error frame to network", "error", err)
 	}
