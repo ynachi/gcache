@@ -14,8 +14,6 @@ import (
 	"time"
 )
 
-var ErrNotAGcacheCommand = errors.New("command should be an Array frame")
-
 type Server struct {
 	address  string
 	listener net.Listener
@@ -97,10 +95,8 @@ func (s *Server) Address() string {
 	return s.address
 }
 
+// Start starts the server. It initiates connections handling and commands processing.
 func (s *Server) Start(ctx context.Context) {
-	if s == nil {
-		_, _ = fmt.Fprintln(os.Stderr, "cannot start nil server")
-	}
 	defer func() {
 		if err := s.listener.Close(); err != nil {
 			s.logger.Error("error closing listener", "error", err)
@@ -108,20 +104,7 @@ func (s *Server) Start(ctx context.Context) {
 	}()
 
 	newConns := make(chan Connection)
-
-	go func() {
-		for {
-			c, err := s.listener.Accept()
-			conn := MakeConnection(c)
-			if err != nil {
-				s.logger.Error("error accepting connection", "error", err)
-				// @TODO: implement exponential backoff later
-				time.Sleep(5 * time.Second)
-				continue
-			}
-			newConns <- conn
-		}
-	}()
+	go s.listen(ctx, newConns)
 
 	for {
 		select {
@@ -137,6 +120,25 @@ func (s *Server) Start(ctx context.Context) {
 				s.logger.Debug("connections channel was closed")
 			}
 			go s.handleConnection(ctx, conn)
+		}
+	}
+}
+
+// listen waits for new connections for the lifetime of the server.
+func (s *Server) listen(ctx context.Context, newConns chan<- Connection) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+			c, err := s.listener.Accept()
+			if err != nil {
+				s.logger.Error("error accepting connection", "error", err)
+				// TODO: implement exponential backoff later
+				time.Sleep(5 * time.Second)
+				continue
+			}
+			newConns <- MakeConnection(c)
 		}
 	}
 }
@@ -165,7 +167,9 @@ func (s *Server) handleConnection(ctx context.Context, conn Connection) {
 	}
 }
 
+// handleCommand handles a command received by the server over an established connection.
 func (s *Server) handleCommand(conn Connection) {
+	var ErrNotAGcacheCommand = errors.New("command should be an Array frame")
 	cmdFrame, err := frame.Decode(conn.reader)
 	if err != nil {
 		s.handleError(conn, err, err.Error(), "")
@@ -185,6 +189,7 @@ func (s *Server) handleCommand(conn Connection) {
 	cmd.Apply(nil, conn.writer)
 }
 
+// getCommand extracts a command from a frame array.
 func (s *Server) getCommand(f *frame.Array) (commands.Command, error) {
 	cmdName, err := commands.GetCmdName(f)
 	if err != nil {
@@ -200,6 +205,7 @@ func (s *Server) getCommand(f *frame.Array) (commands.Command, error) {
 
 // handleError is a helper process errors and send feedbacks to the client if needed.
 // message is used to send a meaningful error message to the client instead of the original error message.
+// EOF means the client is done. We don't need to send feedback in such cases.
 func (s *Server) handleError(conn Connection, err error, message string, command string) {
 	if errors.Is(err, io.EOF) {
 		s.logger.Debug("client initiated shutdown", "client_ip", conn.clientIP)
