@@ -134,7 +134,7 @@ func (s *Server) handleConnection(ctx context.Context, conn Connection) {
 			return
 		default:
 			// Get command first
-			cmd, err := getCommand(conn.reader)
+			cmd, err := GetCommand(conn.reader)
 			if err != nil {
 				// EOF means the client is done, so exit.
 				if errors.Is(err, io.EOF) {
@@ -153,9 +153,9 @@ func (s *Server) handleConnection(ctx context.Context, conn Connection) {
 	}
 }
 
-// getCommand handles a command received by the server over an established connection.
-func getCommand(r *bufio.Reader) (command.Command, error) {
-	cmdFrameArray, err := getFrameArray(r)
+// GetCommand handles a command received by the server over an established connection.
+func GetCommand(r *bufio.Reader) (command.Command, error) {
+	cmdFrameArray, err := GetFrameArray(r)
 	if err != nil {
 		return nil, err
 	}
@@ -178,7 +178,7 @@ func parseCommandFromFrame(f *frame.Array) (command.Command, error) {
 
 var ErrNotAGcacheCommand = errors.New("command should be an Array frame")
 
-func getFrameArray(r *bufio.Reader) (*frame.Array, error) {
+func GetFrameArray(r *bufio.Reader) (*frame.Array, error) {
 	cmdFrame, err := frame.Decode(r)
 	if err != nil {
 		return nil, err

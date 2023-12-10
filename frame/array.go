@@ -2,6 +2,7 @@ package frame
 
 import (
 	"fmt"
+	"io"
 	"strings"
 )
 
@@ -16,7 +17,7 @@ type Array struct {
 
 // NewArray create a new Array. This array is not reallocated (means its length is 0) but the
 // capacity is set to avoid sliding. The reason the initial len is 0 is that we expect it to be
-// filled via append.
+// filled via append method.
 func NewArray(size int) *Array {
 	value := make([]Framer, 0, size)
 	return &Array{size: size, value: value}
@@ -53,4 +54,10 @@ func (a *Array) Get(i int) Framer {
 
 func (a *Array) Serialize() []byte {
 	return []byte(a.String())
+}
+
+func (a *Array) WriteTo(w io.Writer) (int64, error) {
+	frameToBytes := a.Serialize()
+	count, err := w.Write(frameToBytes)
+	return int64(count), err
 }

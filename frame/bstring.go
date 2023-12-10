@@ -1,6 +1,9 @@
 package frame
 
-import "fmt"
+import (
+	"fmt"
+	"io"
+)
 
 // BulkString implements Framer interface.
 type BulkString struct {
@@ -25,4 +28,10 @@ func (b *BulkString) String() string {
 // Value returns the value associated with the simple string.
 func (b *BulkString) Value() string {
 	return b.value
+}
+
+func (b *BulkString) WriteTo(w io.Writer) (int64, error) {
+	frameToBytes := b.Serialize()
+	count, err := w.Write(frameToBytes)
+	return int64(count), err
 }

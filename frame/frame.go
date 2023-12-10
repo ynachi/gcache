@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"io"
 	"strconv"
 	"strings"
 )
@@ -28,9 +29,8 @@ type Framer interface {
 	// Stringer needs to be implemented to provide a string representation of a frame.
 	fmt.Stringer
 
-	// WriteTo writes the frames as bytes to an io.Writer
-	// @TODO uncomment after implementing the method on all current frames
-	// WriteTo(w io.Writer) (int64, error)
+	// WriterTo WriteTo writes the frames as bytes to an io.Writer
+	io.WriterTo
 }
 
 // Decode tries to read a frame from a buffer. It returns an error if no frame

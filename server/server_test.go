@@ -88,7 +88,7 @@ func TestGetFrameArray(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := bufio.NewReader(strings.NewReader(tt.give))
-			f, err := getFrameArray(r)
+			f, err := GetFrameArray(r)
 			assert.Equal(t, tt.wantError, err)
 			assert.Equal(t, tt.want, f)
 		})

@@ -1,5 +1,7 @@
 package frame
 
+import "io"
+
 // Bool implements Framer interface.
 type Bool struct {
 	value bool
@@ -16,4 +18,10 @@ func (b *Bool) String() string {
 		return "#t\r\n"
 	}
 	return "#f\r\n"
+}
+
+func (b *Bool) WriteTo(w io.Writer) (int64, error) {
+	frameToBytes := b.Serialize()
+	count, err := w.Write(frameToBytes)
+	return int64(count), err
 }
