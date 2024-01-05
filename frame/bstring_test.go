@@ -102,9 +102,9 @@ func TestBulkString_DecodeBulkString(t *testing.T) {
 				if tt.wantErr {
 					return
 				}
-				t.Fatalf("DecodeBulkString() unexpected error = %v", err)
+				t.Fatalf("DecodeBulkString() unexpected gerror = %v", err)
 			} else if tt.wantErr {
-				t.Fatalf("DecodeBulkString() expected error but got none.")
+				t.Fatalf("DecodeBulkString() expected gerror but got none.")
 			}
 			if *f != tt.wantFrame {
 				t.Errorf("DecodeBulkString() got = %v, want %v", *f, tt.wantFrame)

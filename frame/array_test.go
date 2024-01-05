@@ -100,9 +100,9 @@ func TestArray_DecodeArray(t *testing.T) {
 				if tt.wantErr {
 					return
 				}
-				t.Fatalf("DecodeArray() unexpected error = %v", err)
+				t.Fatalf("DecodeArray() unexpected gerror = %v", err)
 			} else if tt.wantErr {
-				t.Fatalf("DecodeArray() expected error but got none.")
+				t.Fatalf("DecodeArray() expected gerror but got none.")
 			}
 			if !reflect.DeepEqual(*f, tt.wantFrame) {
 				t.Errorf("DecodeArray() got = %v, want %v", *f, tt.wantFrame)

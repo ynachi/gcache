@@ -69,9 +69,9 @@ func TestBool_DecodeBool(t *testing.T) {
 				if tt.wantErr {
 					return
 				}
-				t.Fatalf("DecodeBool() unexpected error = %v", err)
+				t.Fatalf("DecodeBool() unexpected gerror = %v", err)
 			} else if tt.wantErr {
-				t.Fatalf("DecodeBool() expected error but got none.")
+				t.Fatalf("DecodeBool() expected gerror but got none.")
 			}
 			if *f != tt.wantFrame {
 				t.Errorf("DecodeBool() got = %v, want %v", *f, tt.wantFrame)

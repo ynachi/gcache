@@ -23,7 +23,7 @@ func NewArray(size int) *Array {
 	return &Array{size: size, value: value}
 }
 
-// Append add a new frame to an Array. It error when there is not enough capacity to add more.
+// Append add a new frame to an Array. It gerror when there is not enough capacity to add more.
 // It does not grow the Array automatically.
 func (a *Array) Append(f Framer) error {
 	if len(a.value) >= a.size {

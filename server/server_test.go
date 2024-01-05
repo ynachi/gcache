@@ -5,6 +5,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/ynachi/gcache/command"
 	"github.com/ynachi/gcache/frame"
+	"github.com/ynachi/gcache/gerror"
 	"io"
 	"log/slog"
 	"strings"
@@ -76,7 +77,7 @@ func TestGetFrameArray(t *testing.T) {
 			name:      "not an array frame",
 			give:      "$5\r\nVALUE\r\n",
 			want:      nil,
-			wantError: ErrNotAGcacheCommand,
+			wantError: gerror.ErrNotAGcacheCommand,
 		},
 		{
 			name:      "empty frame",

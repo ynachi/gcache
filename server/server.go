@@ -6,7 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"github.com/ynachi/gcache/command"
+	"github.com/ynachi/gcache/db"
 	"github.com/ynachi/gcache/frame"
+	"github.com/ynachi/gcache/gerror"
 	"io"
 	"log/slog"
 	"net"
@@ -18,6 +20,7 @@ type Server struct {
 	address  string
 	listener net.Listener
 	logger   *slog.Logger
+	cache    *db.Cache
 }
 
 const (
@@ -43,15 +46,22 @@ func getLogLevel(level string) slog.Level {
 // NewServer creates a new Server with the provided IP address and port.
 // It starts listening for incoming connections on the specified address and port.
 // Returns a pointer to the created Server or an error if the listener fails to start.
-func NewServer(ip string, port int, logLevel string) (*Server, error) {
+func NewServer(ip string, port int, logLevel string, maxItems int64, evictionPolicyName string) (*Server, error) {
 	connString := fmt.Sprintf("%s:%d", ip, port)
 	listener, err := net.Listen("tcp", connString)
 	if err != nil {
 		return nil, err
 	}
+
+	cache, err := db.NewCache(maxItems, evictionPolicyName)
+	if err != nil {
+		return nil, err
+	}
+
 	server := &Server{
 		address:  listener.Addr().String(),
 		listener: listener,
+		cache:    cache,
 	}
 	server.setLogger(logLevel)
 	return server, nil
@@ -68,7 +78,7 @@ func (s *Server) Address() string {
 	return s.address
 }
 
-// Start starts the server. It initiates connections handling and command processing.
+// Start starts the server. It listens to new connections and processes them.
 func (s *Server) Start(ctx context.Context) {
 	defer func() {
 		if err := s.listener.Close(); err != nil {
@@ -83,14 +93,17 @@ func (s *Server) Start(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			// Close all connections
-			s.logger.Info("gracefully shutdown server")
-			_ = s.listener.Close()
+			s.logger.Debug("gracefully shutdown server")
+			if err := s.listener.Close(); err != nil {
+				s.logger.Error("error closing listener", "error", err)
+			}
 			return
 		case conn, ok := <-newConns:
 			// NoK means newConns channel is closed.
 			// So drop because we would not be able to process connections, anyway
 			if !ok {
 				s.logger.Debug("connections channel was closed")
+				return
 			}
 			go s.handleConnection(ctx, conn)
 		}
@@ -111,7 +124,7 @@ func (s *Server) listen(ctx context.Context, newConns chan<- Connection) {
 				time.Sleep(5 * time.Second)
 				continue
 			}
-			newConns <- MakeConnection(c)
+			newConns <- MakeConnection(c, s.cache)
 		}
 	}
 }
@@ -134,7 +147,7 @@ func (s *Server) handleConnection(ctx context.Context, conn Connection) {
 			return
 		default:
 			// Get command first
-			cmd, err := GetCommand(conn.reader)
+			cmd, err := conn.GetCommand()
 			if err != nil {
 				// EOF means the client is done, so exit.
 				if errors.Is(err, io.EOF) {
@@ -145,49 +158,16 @@ func (s *Server) handleConnection(ctx context.Context, conn Connection) {
 				s.SendError(err.Error(), conn.writer)
 				continue
 			}
-
+			// unknown command ?
+			if _, ok := cmd.(*command.Unknown); ok {
+				s.SendError(gerror.ErrInvalidCmdName.Error(), conn.writer)
+				continue
+			}
 			// Apply command
 			s.logger.Debug("command received", "client_ip", conn.clientIP, "cmd", cmd.String())
 			cmd.Apply(nil, conn.writer)
 		}
 	}
-}
-
-// GetCommand handles a command received by the server over an established connection.
-func GetCommand(r *bufio.Reader) (command.Command, error) {
-	cmdFrameArray, err := GetFrameArray(r)
-	if err != nil {
-		return nil, err
-	}
-	return parseCommandFromFrame(cmdFrameArray)
-}
-
-// parseCommandFromFrame extracts a command from a frame array.
-func parseCommandFromFrame(f *frame.Array) (command.Command, error) {
-	cmdName, err := command.GetCmdName(f)
-	if err != nil {
-		return nil, err
-	}
-	cmd := command.NewCommand(cmdName)
-	err = cmd.FromFrame(f)
-	if err != nil {
-		return nil, err
-	}
-	return cmd, nil
-}
-
-var ErrNotAGcacheCommand = errors.New("command should be an Array frame")
-
-func GetFrameArray(r *bufio.Reader) (*frame.Array, error) {
-	cmdFrame, err := frame.Decode(r)
-	if err != nil {
-		return nil, err
-	}
-	arrayFrame, ok := cmdFrame.(*frame.Array)
-	if !ok {
-		return nil, ErrNotAGcacheCommand
-	}
-	return arrayFrame, nil
 }
 
 // SendError responds to a client with an error.

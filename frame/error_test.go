@@ -45,9 +45,9 @@ func TestError_DecodeError(t *testing.T) {
 				if tt.wantErr {
 					return
 				}
-				t.Fatalf("DecodeError() unexpected error = %v", err)
+				t.Fatalf("DecodeError() unexpected gerror = %v", err)
 			} else if tt.wantErr {
-				t.Fatalf("DecodeError() expected error but got none.")
+				t.Fatalf("DecodeError() expected gerror but got none.")
 			}
 			if *f != tt.wantFrame {
 				t.Errorf("DecodeError() got = %v, want %v", *f, tt.wantFrame)

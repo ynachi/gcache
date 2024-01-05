@@ -15,7 +15,7 @@ func main() {
 	sigchan := make(chan os.Signal, 1)
 	signal.Notify(sigchan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT, os.Interrupt)
 
-	srv, err := server.NewServer("127.0.0.1", 6379, "INFO")
+	srv, err := server.NewServer("127.0.0.1", 6379, "INFO", 5, "LRU")
 	if err != nil {
 		fmt.Printf("Error creating server %v", err)
 		os.Exit(1)

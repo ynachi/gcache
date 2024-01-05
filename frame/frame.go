@@ -33,17 +33,17 @@ type Framer interface {
 	io.WriterTo
 }
 
-// Decode tries to read a frame from a buffer. It returns an error if no frame
+// Decode tries to read a frame from a buffer. It returns an gerror if no frame
 // can be read from the buffer.
-// In case an error occurs, the bytes read before getting the
-// error are discarded. The reason to discard is that the buffer is reused to
+// In case an gerror occurs, the bytes read before getting the
+// gerror are discarded. The reason to discard is that the buffer is reused to
 // read multiple frames.
 // So if there is an invalid frame, discarding it gives the
 // chance to read a good one in subsequent calls. Also note that the buffer is
 // supposed to be filled with stream of data. Lastly, after a successful read,
 // the read cursor is positioned after the bytes read for subsequent reads. Care
 // should be taken to check the incoming frame type before calling Deserialize as
-// bytes read upon error are lost.
+// bytes read upon gerror are lost.
 // Decode relies on some decoding function defined at frames' level. For instance, when decode identify that it
 // needs to decode a simple string Frame, it would call DecodeSimpleString.
 func Decode(rd *bufio.Reader) (Framer, error) {
@@ -72,7 +72,7 @@ func Decode(rd *bufio.Reader) (Framer, error) {
 }
 
 // DecodeSimpleString consume a simple string from a buffer. If an
-// error occurs, it is returned, and the bytes read so far are lost.
+// gerror occurs, it is returned, and the bytes read so far are lost.
 func DecodeSimpleString(buff *bufio.Reader) (*SimpleString, error) {
 	frameContent, err := simpleStringFromBuffer(buff)
 	if err != nil {
@@ -85,7 +85,7 @@ func DecodeSimpleString(buff *bufio.Reader) (*SimpleString, error) {
 	return s, nil
 }
 
-// simpleStringFromBuffer tries a simple string from a buffer. It error if it cannot immediately read one.
+// simpleStringFromBuffer tries a simple string from a buffer. It gerror if it cannot immediately read one.
 func simpleStringFromBuffer(rd *bufio.Reader) (string, error) {
 	frameContent, err := readUntilCRLFSimple(rd)
 	if err != nil {
@@ -101,7 +101,7 @@ func simpleStringFromBuffer(rd *bufio.Reader) (string, error) {
 }
 
 // readUntilCRLFSimple a string with does not contain any CR or LF until it reach.
-// It returns an error if the immediately coming string does not match the requirements.
+// It returns an gerror if the immediately coming string does not match the requirements.
 // The result is stripped from the CRLF.
 // This function returns various errors which should be taken care of by the caller.
 // Io.EOF when we reach the end of the stream without any CRLF

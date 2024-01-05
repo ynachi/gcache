@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"github.com/ynachi/gcache/db"
 	"github.com/ynachi/gcache/frame"
+	"github.com/ynachi/gcache/gerror"
 	"log/slog"
 )
 
@@ -12,21 +13,21 @@ type Ping struct {
 	logger  *slog.Logger
 }
 
-func (c *Ping) Apply(_ db.Database, dest *bufio.Writer) {
+func (c *Ping) Apply(_ *db.Cache, dest *bufio.Writer) {
 	defer func(dest *bufio.Writer) {
 		err := dest.Flush()
 		if err != nil {
-			c.logger.Error("unable to write to destination", "error", err)
+			c.logger.Error("unable to write to destination", "gerror", err)
 		}
 	}(dest)
 	resp, err := frame.NewSimpleString(c.message)
 	if err != nil {
-		// handle error
+		// handle gerror
 		return
 	}
 	_, err = resp.WriteTo(dest)
 	if err != nil {
-		// handle error
+		// handle gerror
 		return
 	}
 }
@@ -37,8 +38,8 @@ func (c *Ping) FromFrame(f *frame.Array) error {
 		return err
 	}
 	switch {
-	case cmdName != "PING" || f.Size() > 2:
-		return ErrInvalidPingCommand
+	case cmdName != "ping" || f.Size() > 2:
+		return gerror.ErrInvalidPingCommand
 	case f.Size() == 1:
 		c.message = "PONG"
 	default:

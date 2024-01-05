@@ -122,7 +122,7 @@ func TestNewSimpleString(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := NewSimpleString(tt.give)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("NewSimpleString() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("NewSimpleString() gerror = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
@@ -167,14 +167,14 @@ func TestDecodeSimpleString(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			f, err := DecodeSimpleString(tt.give)
-			if err != nil { // an error occurred
+			if err != nil { // an gerror occurred
 				if tt.wantErr { // but it is expected
 					return // so the test is successful.
 				}
 				// not expected though, fail the test.
-				t.Fatalf("DecodeSimpleString() unexpected error = %v", err)
-			} else if tt.wantErr { // no error but one was expected!
-				t.Fatalf("DecodeSimpleString() expected error but got none.")
+				t.Fatalf("DecodeSimpleString() unexpected gerror = %v", err)
+			} else if tt.wantErr { // no gerror but one was expected!
+				t.Fatalf("DecodeSimpleString() expected gerror but got none.")
 			}
 			// finally, if no errors and none are expected, check the result:
 			if *f != tt.wantFrame {

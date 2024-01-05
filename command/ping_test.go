@@ -35,7 +35,7 @@ func TestPing_Apply(t *testing.T) {
 			f, _ := frame.Decode(bufio.NewReader(writeBuffer))
 			got, ok := f.(*frame.SimpleString)
 			if !ok {
-				t.Fatalf("expected success, got error")
+				t.Fatalf("expected success, got gerror")
 			}
 
 			if got.Value() != tt.want {

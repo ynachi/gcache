@@ -1,43 +1,45 @@
+// Package db package defines interfaces to implement a caching database.
+// It also custom storage backends such as skip lists.
+// The caching server supports multiple storage backends along with different eviction policies.
+// So it is important to provide a shared behavior for the storage itself and the policies.
+// To implement a caching strategy (i.e.: db + policy), one will have to define a Database and a CachePolicy structs
+// which implement the relevant interfaces respectively.
+// They will then need to define a third structure which combines both.
+// For example, a Cache server using LRU policy with HashMap as backend.
+// It is also possible to just define one structure which implements all the required interfaces.
 package db
 
-// Database is the general interface for different cache backend.
-// Any will typically be a pointer to a cache entry: example *CacheEntry
-type Database[T CacheEntry] interface {
-	Get(Key string) (T, bool)
-	Set(key string, entry T)
-	Delete(key string)
-	Iterate() <-chan T
-}
+import (
+	"github.com/ynachi/gcache/db/policy"
+	"github.com/ynachi/gcache/gerror"
+	"strings"
+)
 
-// CachePolicy defines how entries are evicted.
-type CachePolicy interface {
-	// RefreshEntry refreshes an existing elements
-	RefreshEntry(key string)
-	// ChooseEvict returns the key of the item to be evicted.
-	// It does not evict the item itself.
-	// After the key is selected, we can call the delete method of the backend database to remove the entry.
-	ChooseEvict() string
+// Eviction defines how entries are evicted.
+type Eviction interface {
+	// Refresh refreshes an existing elements
+	Refresh(key string)
+
+	// Evict evicts an item and return it key.
+	// An error is returned if the key is not found.
+	// This method should not return an error.
+	Evict() string
 
 	// Add a new element not already managed by this policy
 	Add(key string)
+
+	// Delete remove an element from the policy metadata.
+	Delete(key string)
 }
 
-type CacheEntry interface {
-	Size() uintptr // size in bytes
-}
-
-// Define caching entries structs here
-
-// ttlEntry is an entry for lfu policy.
-type ttlEntry struct {
-	key                 string
-	value               string
-	expirationTimestamp int64
-}
-
-// lfuEntry is an entry for lfu policy.
-type lfuEntry struct {
-	key         string
-	value       string
-	accessCount int
+// CreateEvictionPolicy is a factory method for eviction policies.
+func CreateEvictionPolicy(evictionType string) (Eviction, error) {
+	switch strings.ToLower(evictionType) {
+	case "lfu":
+		return policy.NewLFU(), nil
+	case "lru":
+		return policy.NewLRU(), nil
+	default:
+		return nil, gerror.ErrEvictionPolicyNotFound
+	}
 }

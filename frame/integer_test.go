@@ -121,9 +121,9 @@ func TestInteger_DecodeInteger(t *testing.T) {
 				if tt.wantErr {
 					return
 				}
-				t.Fatalf("DecodeInteger() unexpected error = %v", err)
+				t.Fatalf("DecodeInteger() unexpected gerror = %v", err)
 			} else if tt.wantErr {
-				t.Fatalf("DecodeInteger() expected error but got none.")
+				t.Fatalf("DecodeInteger() expected gerror but got none.")
 			}
 			if *f != tt.wantFrame {
 				t.Errorf("DecodeInteger() got = %v, want %v", *f, tt.wantFrame)
