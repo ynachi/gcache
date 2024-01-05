@@ -17,7 +17,7 @@ func NewBulkString(value string) *BulkString {
 
 // Serialize turns the frame into a slice of byte for transfer over a network stream.
 func (b *BulkString) Serialize() []byte {
-	return []byte(b.value)
+	return []byte(b.String())
 }
 
 // String provides a text representation of an BulkString frame.

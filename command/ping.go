@@ -17,17 +17,22 @@ func (c *Ping) Apply(_ *db.Cache, dest *bufio.Writer) {
 	defer func(dest *bufio.Writer) {
 		err := dest.Flush()
 		if err != nil {
-			c.logger.Error("unable to write to destination", "gerror", err)
+			c.logger.Error("unable to write to destination", "error", err)
 		}
 	}(dest)
-	resp, err := frame.NewSimpleString(c.message)
-	if err != nil {
-		// handle gerror
-		return
+	if c.message == "PONG" {
+		if resp, err := frame.NewSimpleString(c.message); err == nil {
+			_, err = resp.WriteTo(dest)
+			if err != nil {
+				// handle error
+				return
+			}
+		}
 	}
-	_, err = resp.WriteTo(dest)
+	resp := frame.NewBulkString(c.message)
+	_, err := resp.WriteTo(dest)
 	if err != nil {
-		// handle gerror
+		// handle error
 		return
 	}
 }
