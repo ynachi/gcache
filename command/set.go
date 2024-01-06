@@ -31,11 +31,7 @@ func (c *Set) Apply(cache *db.Cache, dest *bufio.Writer) {
 
 // @TODO Minimal implementation for now, to fix
 func (c *Set) FromFrame(f *frame.Array) error {
-	cmdName, err := GetCmdName(f)
-	if err != nil {
-		return err
-	}
-	if cmdName != "set" || f.Size() != 3 {
+	if f.Size() != 3 {
 		return gerror.ErrInvalidCmdArgs
 	}
 	c.key = f.Get(1).(*frame.BulkString).Value()

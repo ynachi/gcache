@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"github.com/stretchr/testify/assert"
 	"github.com/ynachi/gcache/frame"
+	"github.com/ynachi/gcache/gerror"
 	"log/slog"
 	"strings"
 	"testing"
@@ -53,9 +54,6 @@ func TestPing_FromFrame(t *testing.T) {
 	_ = pingWithMsg.Append(frame.NewBulkString("PING"))
 	_ = pingWithMsg.Append(frame.NewBulkString("Hello World"))
 
-	wrongCmd := frame.NewArray(1)
-	_ = wrongCmd.Append(frame.NewBulkString("PINg"))
-
 	pingTooManyArgs := frame.NewArray(3)
 	_ = pingTooManyArgs.Append(frame.NewBulkString("PING"))
 	_ = pingTooManyArgs.Append(frame.NewBulkString("Hello World"))
@@ -69,8 +67,7 @@ func TestPing_FromFrame(t *testing.T) {
 	}{
 		{name: "ValidSimplePing", frame: simplePING, want: "PONG", wantError: nil},
 		{name: "ValidPingWithMessage", frame: pingWithMsg, want: "Hello World", wantError: nil},
-		{name: "InvalidWrongCmdWord", frame: wrongCmd, want: "", wantError: ErrInvalidCmdName},
-		{name: "InvalidTooManyArgs", frame: pingTooManyArgs, want: "", wantError: ErrInvalidPingCommand},
+		{name: "InvalidTooManyArgs", frame: pingTooManyArgs, want: "", wantError: gerror.ErrInvalidPingCommand},
 	}
 
 	for _, tt := range tests {

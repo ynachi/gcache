@@ -37,6 +37,13 @@ func NewCommand(cmdName string) Command {
 	}
 }
 
+// use that to fail fast when the command is not valid.
+var registeredCommands = map[string]struct{}{
+	"ping": {},
+	"set":  {},
+	"get":  {},
+}
+
 // GetCmdName gets a command name from a Frame Array.
 func GetCmdName(f *frame.Array) (string, error) {
 	if f.Size() < 1 {
@@ -47,5 +54,9 @@ func GetCmdName(f *frame.Array) (string, error) {
 	if !ok {
 		return "", gerror.ErrNotGcacheCmd
 	}
-	return strings.ToLower(cmdName.Value()), nil
+	cmdNameValue := strings.ToLower(cmdName.Value())
+	if _, ok = registeredCommands[cmdNameValue]; !ok {
+		return "", gerror.ErrInvalidCmdName
+	}
+	return cmdNameValue, nil
 }

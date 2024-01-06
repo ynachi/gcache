@@ -38,12 +38,8 @@ func (c *Ping) Apply(_ *db.Cache, dest *bufio.Writer) {
 }
 
 func (c *Ping) FromFrame(f *frame.Array) error {
-	cmdName, err := GetCmdName(f)
-	if err != nil {
-		return err
-	}
 	switch {
-	case cmdName != "ping" || f.Size() > 2:
+	case f.Size() > 2:
 		return gerror.ErrInvalidPingCommand
 	case f.Size() == 1:
 		c.message = "PONG"

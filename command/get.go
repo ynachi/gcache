@@ -37,11 +37,7 @@ func (c *Get) Apply(cache *db.Cache, dest *bufio.Writer) {
 }
 
 func (c *Get) FromFrame(f *frame.Array) error {
-	cmdName, err := GetCmdName(f)
-	if err != nil {
-		return err
-	}
-	if cmdName != "get" || f.Size() != 2 {
+	if f.Size() != 2 {
 		return gerror.ErrInvalidCmdArgs
 	}
 	c.key = f.Get(1).(*frame.BulkString).Value()
