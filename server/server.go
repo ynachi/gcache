@@ -148,24 +148,22 @@ func (s *Server) handleConnection(ctx context.Context, conn Connection) {
 		default:
 			// Get command first
 			cmd, err := conn.GetCommand()
-			if err != nil {
-				// EOF means the client is done, so exit.
-				if errors.Is(err, io.EOF) {
-					s.logger.Debug("client initiated shutdown", "client_ip", conn.clientIP)
-					return
+			if err == nil {
+				// process unknown command
+				if _, ok := cmd.(*command.Unknown); ok {
+					s.SendError(gerror.ErrInvalidCmdName.Error(), conn.writer)
+					continue
 				}
-				s.logger.Error("error while handling command", "client_ip", conn.clientIP, "err", err)
-				s.SendError(err.Error(), conn.writer)
-				continue
+
+				// Apply command
+				s.logger.Debug("command received", "client_ip", conn.clientIP, "cmd", cmd.Name())
+				cmd.Apply(conn.storage, conn.writer)
 			}
-			// unknown command ?
-			if _, ok := cmd.(*command.Unknown); ok {
-				s.SendError(gerror.ErrInvalidCmdName.Error(), conn.writer)
-				continue
+
+			// Exit on IOF. Log network unavailability ones to the client. Send the rest to the client.
+			if s.handleConnectionError(conn, err) {
+				return
 			}
-			// Apply command
-			s.logger.Debug("command received", "client_ip", conn.clientIP, "cmd", cmd.Name())
-			cmd.Apply(conn.storage, conn.writer)
 		}
 	}
 }
@@ -186,4 +184,31 @@ func (s *Server) SendError(msg string, w *bufio.Writer) {
 	if err != nil {
 		s.logger.Error("error writing error frame to network", "error", err)
 	}
+}
+
+// handleConnectionError handles connection errors and tells if the caller should return.
+// In all other cases, the caller should continue the execution as those are temporary.
+func (s *Server) handleConnectionError(conn Connection, err error) (shouldExit bool) {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, io.EOF) {
+		s.logger.Debug("client initiated shutdown", "client_ip", conn.clientIP)
+		return true
+	}
+
+	// Also check for other network errors
+	nErr, ok := err.(net.Error)
+	if ok && nErr.Timeout() {
+		s.logger.Error("network timeout", "client_ip", conn.clientIP, "err", err)
+		return false
+	}
+	if opErr, ok := err.(*net.OpError); ok && opErr.Err.Error() == "read: connection reset by peer" {
+		s.logger.Error("Connection reset by peer.", "client_ip", conn.clientIP, "err", err)
+		return false
+	}
+
+	s.logger.Error("error while handling command", "client_ip", conn.clientIP, "err", err)
+	s.SendError(err.Error(), conn.writer)
+	return false
 }
