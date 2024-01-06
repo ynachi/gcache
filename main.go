@@ -9,13 +9,14 @@ import (
 	"syscall"
 )
 
+// main is for prototyping only for now
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	sigchan := make(chan os.Signal, 1)
 	signal.Notify(sigchan, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT, os.Interrupt)
 
-	srv, err := server.NewServer("127.0.0.1", 6379, "INFO", 5, "LRU")
+	srv, err := server.NewServer("127.0.0.1", 6379, "INFO", 5000000000, "LFU")
 	if err != nil {
 		fmt.Printf("Error creating server %v", err)
 		os.Exit(1)

@@ -15,6 +15,6 @@ func (c *Unknown) FromFrame(_ *frame.Array) error {
 	return nil
 }
 
-func (c *Unknown) String() string {
+func (c *Unknown) Name() string {
 	return "unknown command"
 }

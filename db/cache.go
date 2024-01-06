@@ -1,7 +1,6 @@
 package db
 
 import (
-	"github.com/ynachi/gcache/gerror"
 	"sync"
 	"sync/atomic"
 )
@@ -50,15 +49,15 @@ func (c *Cache) decrement() {
 
 // Get retrieves the value associated with the provided key from the cache.
 // It returns the value along with a boolean flag indicating if the value was found in the cache or not.
-func (c *Cache) Get(key string) (string, error) {
+func (c *Cache) Get(key string) (string, bool) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	e, ok := c.storage[key]
 	if ok {
 		c.eviction.Refresh(e.key)
-		return e.value, nil
+		return e.value, ok
 	}
-	return "", gerror.ErrKeyNotFound
+	return "", false
 }
 
 func (c *Cache) Set(key string, value string) {

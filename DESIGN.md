@@ -26,6 +26,8 @@ This section is related to commands implementation. Each command is implemented 
 accompanying test file. We follow *Go command line pattern*. The files [command.go](command/command.go) provides
 interface abstraction about commands. In fact, each command has to respect a structure which is enforced by this 
 interface.
+To add a new command, implement the Command interface and update the factory method.
+Each new command should have its own file.
 
 ## The server folder
 This is where we implement server logic: like spawning a new server, listening to connections, processing commands and 

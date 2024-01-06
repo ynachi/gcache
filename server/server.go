@@ -164,8 +164,8 @@ func (s *Server) handleConnection(ctx context.Context, conn Connection) {
 				continue
 			}
 			// Apply command
-			s.logger.Debug("command received", "client_ip", conn.clientIP, "cmd", cmd.String())
-			cmd.Apply(nil, conn.writer)
+			s.logger.Debug("command received", "client_ip", conn.clientIP, "cmd", cmd.Name())
+			cmd.Apply(conn.storage, conn.writer)
 		}
 	}
 }

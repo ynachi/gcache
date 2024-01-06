@@ -2,7 +2,6 @@ package command
 
 import (
 	"bufio"
-	"fmt"
 	"github.com/ynachi/gcache/db"
 	"github.com/ynachi/gcache/frame"
 	"github.com/ynachi/gcache/gerror"
@@ -11,7 +10,8 @@ import (
 
 // Command represents a command issued to the cache server with their args.
 type Command interface {
-	fmt.Stringer
+	// Name returns the command name
+	Name() string
 
 	// Apply applies the command et write back the response to the client
 	Apply(db *db.Cache, dest *bufio.Writer)
@@ -22,12 +22,16 @@ type Command interface {
 
 // NewCommand instantiates a concrete command type base on its name.
 // NewCommand should rely on
-// GetCmdName to extract the command name from an Array frame in most case.
+// GetCmdName to extract the command name from an Array frame in most cases.
 // This should avoid returning a nil command struct.
 func NewCommand(cmdName string) Command {
 	switch cmdName {
 	case "ping":
 		return new(Ping)
+	case "set":
+		return new(Set)
+	case "get":
+		return new(Get)
 	default:
 		return nil
 	}

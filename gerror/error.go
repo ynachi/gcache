@@ -11,4 +11,6 @@ var (
 	ErrInvalidPingCommand     = errors.New("ping command is malformed")
 
 	ErrInvalidCmdName = errors.New("command not found")
+
+	ErrInvalidCmdArgs = errors.New("cmd line args are not valid")
 )
