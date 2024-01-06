@@ -12,7 +12,7 @@ clone and wanted existing Redis clients to be compatible with our server.
 
 ## Code organization
 
-### Frame folder
+### Frame
 The [frame](frame) folder contains the code implementing the RESP protocol. Not everything is implemented for now.
 Also, we rely on version 3 at this time. Here is how this section is organized:
 
@@ -21,7 +21,7 @@ object.
 - There is a file for each frame type (with its test file). For instance, RESP simple string is implemented in 
 [string.go](frame/sstring.go) and [string_test.go](frame/sstring_test.go) files.
 
-### Commands folder
+### Command
 This section is related to commands implementation. Each command is implemented in its own file along with an 
 accompanying test file. We follow *Go command line pattern*. The files [command.go](command/command.go) provides
 interface abstraction about commands. In fact, each command has to respect a structure which is enforced by this 
@@ -29,6 +29,17 @@ interface.
 To add a new command, implement the Command interface and update the factory method.
 Each new command should have its own file.
 
-## The server folder
+### Database
+The database is the storage backend for the server.
+It is split into two parts: the storage layer and the eviction policy layer.
+We use Go Map as storage.
+We support multiple evictions policies which share a common interface.
+To achieve this modularity, we separated the storage and eviction structures.
+They are totally independent (each has its own state).
+The logic for GET, SET,
+DEL commands are already defined in [cache.go](db/cache.go)
+so adding a new policy is as simple as implementing the Eviction interface.
+
+### Server
 This is where we implement server logic: like spawning a new server, listening to connections, processing commands and 
 responding to clients. We heavily rely on a Go concurrency model.
