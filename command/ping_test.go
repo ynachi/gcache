@@ -34,7 +34,7 @@ func TestPing_Apply(t *testing.T) {
 			ping.Apply(nil, writer)
 
 			f, _ := frame.Decode(bufio.NewReader(writeBuffer))
-			got, ok := f.(*frame.SimpleString)
+			got, ok := f.(*frame.BulkString)
 			if !ok {
 				t.Fatalf("expected success, got gerror")
 			}
