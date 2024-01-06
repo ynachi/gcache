@@ -43,3 +43,33 @@ so adding a new policy is as simple as implementing the Eviction interface.
 ### Server
 This is where we implement server logic: like spawning a new server, listening to connections, processing commands and 
 responding to clients. We heavily rely on a Go concurrency model.
+
+### Concurrency
+Each connection is handled by a goroutine which shares the database with others.
+So we need to add some synchronization to avoid race condition.
+The first approach we tried was (is still) to use a mutex at on the cache data structure.
+This mutex is locked at the beginning of the operation and released when done.
+We have determined
+that doing so has no advantage other a single process cache because the mutex is locked during the whole operation.
+This means that at the end, our server behaves like a single process server or even worse,
+it performs poorer when the number of concurrent clients increases at a certain level.
+This assumption is backed by some benchmarking with a real redis server.
+
+I believe using fine-grained lock would help better even if it makes the code harder to write and to reason about.
+
+<u>Benchmarks</u>
+
+Real Redis server
+````commandline
+➜  go-benchmarks git:(main) ✗ redis-benchmark -t set,get -n 1000000 -r 100000000 -c 1000 -q
+SET: 150897.84 requests per second, p50=3.295 msec                    
+GET: 151952.59 requests per second, p50=3.295 msec
+````
+
+Gcache server
+````commandline
+➜  go-benchmarks git:(main) ✗ redis-benchmark -t set,get -n 1000000 -r 100000000 -c 1000 -q
+WARNING: Could not fetch server CONFIG
+SET: 129382.84 requests per second, p50=3.527 msec                    
+GET: 141282.84 requests per second, p50=3.431 msec
+````
