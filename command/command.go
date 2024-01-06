@@ -32,6 +32,8 @@ func NewCommand(cmdName string) Command {
 		return new(Set)
 	case "get":
 		return new(Get)
+	case "del":
+		return new(Del)
 	default:
 		return nil
 	}
@@ -42,6 +44,7 @@ var registeredCommands = map[string]struct{}{
 	"ping": {},
 	"set":  {},
 	"get":  {},
+	"del":  {},
 }
 
 // GetCmdName gets a command name from a Frame Array.

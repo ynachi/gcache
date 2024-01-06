@@ -81,15 +81,21 @@ func (c *Cache) Set(key string, value string) {
 	}
 }
 
-func (c *Cache) Delete(key string) {
+// Delete delete keys and return the number of removed keys
+func (c *Cache) Delete(keys ...string) int {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	e, ok := c.storage[key]
-	if ok {
-		delete(c.storage, key)
-		c.decrement()
-		c.eviction.Delete(e.key)
+	deletedKeys := 0
+	for _, key := range keys {
+		e, ok := c.storage[key]
+		if ok {
+			delete(c.storage, key)
+			c.decrement()
+			c.eviction.Delete(e.key)
+			deletedKeys += 1
+		}
 	}
+	return deletedKeys
 }
 
 func NewCache(maxItem int64, evictionPolicyType string) (*Cache, error) {

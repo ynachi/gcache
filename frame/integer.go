@@ -27,3 +27,7 @@ func (i *Integer) WriteTo(w io.Writer) (int64, error) {
 	count, err := w.Write(frameToBytes)
 	return int64(count), err
 }
+
+func NewInteger(value int64) *Integer {
+	return &Integer{value: value}
+}
