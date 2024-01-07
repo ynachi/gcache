@@ -1,14 +1,11 @@
 package server
 
 import (
-	"bufio"
 	"github.com/stretchr/testify/assert"
 	"github.com/ynachi/gcache/command"
 	"github.com/ynachi/gcache/frame"
 	"github.com/ynachi/gcache/gerror"
-	"io"
 	"log/slog"
-	"strings"
 	"testing"
 )
 
@@ -58,44 +55,6 @@ func TestGetLogLevel(t *testing.T) {
 	}
 }
 
-func TestGetFrameArray(t *testing.T) {
-	validFrameArray := frame.NewArray(1)
-	_ = validFrameArray.Append(frame.NewBulkString("GETS"))
-	tests := []struct {
-		name      string
-		give      string
-		want      *frame.Array
-		wantError error
-	}{
-		{
-			name:      "valid array frame",
-			give:      "*1\r\n$4\r\nGETS\r\n",
-			want:      validFrameArray,
-			wantError: nil,
-		},
-		{
-			name:      "not an array frame",
-			give:      "$5\r\nVALUE\r\n",
-			want:      nil,
-			wantError: gerror.ErrNotAGcacheCommand,
-		},
-		{
-			name:      "empty frame",
-			give:      "",
-			wantError: io.EOF,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			r := bufio.NewReader(strings.NewReader(tt.give))
-			f, err := GetFrameArray(r)
-			assert.Equal(t, tt.wantError, err)
-			assert.Equal(t, tt.want, f)
-		})
-	}
-}
-
 func TestParseCommandFromFrame(t *testing.T) {
 	// We use PING command to test parse command from frame
 	simplePingFrameArray := frame.NewArray(1)
@@ -141,13 +100,13 @@ func TestParseCommandFromFrame(t *testing.T) {
 			name:      "simple ping wrong command",
 			give:      simpleWrongCommand,
 			want:      nil,
-			wantError: command.ErrInvalidCmdName,
+			wantError: gerror.ErrInvalidCmdName,
 		},
 		{
 			name:      "complex ping wrong command",
 			give:      complexPingFrameArrayInvalid,
 			want:      nil,
-			wantError: command.ErrInvalidPingCommand,
+			wantError: gerror.ErrInvalidPingCommand,
 		},
 	}
 
