@@ -9,7 +9,7 @@ import (
 	"syscall"
 )
 
-// main is for prototyping only for now
+// main is for prototyping only for now.
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 

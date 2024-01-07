@@ -29,7 +29,7 @@ func (c *Set) Apply(cache *db.Cache, dest *bufio.Writer) {
 	}
 }
 
-// @TODO Minimal implementation for now, to fix
+// @TODO Minimal implementation for now, to fix.
 func (c *Set) FromFrame(f *frame.Array) error {
 	if f.Size() != 3 {
 		return gerror.ErrInvalidCmdArgs
