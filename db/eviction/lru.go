@@ -1,4 +1,4 @@
-package policy
+package eviction
 
 import (
 	"container/list"
@@ -9,7 +9,7 @@ type LRU struct {
 	lookup map[string]*list.Element
 }
 
-// Refresh refreshes an existing element which was already seen by the policy
+// Refresh refreshes an existing element which was already seen by the eviction
 func (l *LRU) Refresh(key string) {
 	q := l.queue
 	if ele, ok := l.lookup[key]; ok {

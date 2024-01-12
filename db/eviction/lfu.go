@@ -1,4 +1,4 @@
-package policy
+package eviction
 
 import (
 	"container/heap"
