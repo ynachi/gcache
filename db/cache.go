@@ -78,6 +78,7 @@ func (c *Cache) Set(key string, value string) {
 		}
 		c.storage[key] = NewEntry(key, value)
 		c.eviction.Add(key)
+		c.increment()
 	}
 }
 

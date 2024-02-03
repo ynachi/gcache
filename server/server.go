@@ -198,12 +198,14 @@ func (s *Server) handleConnectionError(conn Connection, err error) (shouldExit b
 	}
 
 	// Also check for other network errors
-	nErr, ok := err.(net.Error)
+	var nErr net.Error
+	ok := errors.As(err, &nErr)
 	if ok && nErr.Timeout() {
 		s.logger.Error("network timeout", "client_ip", conn.clientIP, "err", err)
 		return false
 	}
-	if opErr, ok := err.(*net.OpError); ok && opErr.Err.Error() == "read: connection reset by peer" {
+	var opErr *net.OpError
+	if errors.As(err, &opErr) && opErr.Err.Error() == "read: connection reset by peer" {
 		s.logger.Error("Connection reset by peer.", "client_ip", conn.clientIP, "err", err)
 		return false
 	}
