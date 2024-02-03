@@ -13,6 +13,7 @@ import (
 	"github.com/ynachi/gcache/db/policy"
 	"github.com/ynachi/gcache/gerror"
 	"strings"
+	"sync"
 )
 
 // Eviction defines how entries are evicted.
@@ -42,4 +43,23 @@ func CreateEvictionPolicy(evictionType string) (Eviction, error) {
 	default:
 		return nil, gerror.ErrEvictionPolicyNotFound
 	}
+}
+
+type CMap struct {
+	mu      sync.Mutex
+	buckets []map[string]*Entry
+}
+
+func NewCmap(size int) *CMap {
+	buckets := make([]map[string]*Entry, 0, size)
+	for i := 0; i < size; i++ {
+		buckets = append(buckets, make(map[string]*Entry))
+	}
+	return &CMap{
+		buckets: buckets,
+	}
+}
+
+func (*c) GetBucket(key string) map[string]*Entry {
+	return c.buckets[hash(key)%len(c.buckets)]
 }
