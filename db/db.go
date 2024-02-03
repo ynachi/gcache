@@ -62,22 +62,31 @@ func NewCmap(size int) *CMap {
 }
 
 func (c *CMap) GetBucket(key string) map[string]*Entry {
+	// no need for lock as the vector itself does not change
 	return c.buckets[hashFnv(key)%len(c.buckets)]
 }
 
 func (c *CMap) setEntry(key string, entry *Entry) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	c.GetBucket(key)[key] = entry
 }
 
 func (c *CMap) getEntryForKey(key string) *Entry {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	return c.GetBucket(key)[key]
 }
 
 func (c *CMap) keyIn(key string) bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	return c.GetBucket(key)[key] != nil
 }
 
 func (c *CMap) DeleteEntry(key string) int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	if _, ok := c.GetBucket(key)[key]; ok {
 		delete(c.GetBucket(key), key)
 		return 1
