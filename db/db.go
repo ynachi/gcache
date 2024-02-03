@@ -12,6 +12,7 @@ package db
 import (
 	"github.com/ynachi/gcache/db/policy"
 	"github.com/ynachi/gcache/gerror"
+	"hash/fnv"
 	"strings"
 	"sync"
 )
@@ -60,6 +61,32 @@ func NewCmap(size int) *CMap {
 	}
 }
 
-func (*c) GetBucket(key string) map[string]*Entry {
-	return c.buckets[hash(key)%len(c.buckets)]
+func (c *CMap) GetBucket(key string) map[string]*Entry {
+	return c.buckets[hashFnv(key)%len(c.buckets)]
+}
+
+func (c *CMap) setEntry(key string, entry *Entry) {
+	c.GetBucket(key)[key] = entry
+}
+
+func (c *CMap) getEntryForKey(key string) *Entry {
+	return c.GetBucket(key)[key]
+}
+
+func (c *CMap) keyIn(key string) bool {
+	return c.GetBucket(key)[key] != nil
+}
+
+func (c *CMap) DeleteEntry(key string) int {
+	if _, ok := c.GetBucket(key)[key]; ok {
+		delete(c.GetBucket(key), key)
+		return 1
+	}
+	return 0
+}
+
+func hashFnv(input string) int {
+	hasher := fnv.New64a()
+	hasher.Write([]byte(input))
+	return int(hasher.Sum64())
 }
