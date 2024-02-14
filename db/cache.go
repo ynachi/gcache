@@ -27,14 +27,8 @@ type Cache struct {
 }
 
 // Size returns the current size of the cache.
-// It retrieves the value of the currentSize field of the Cache struct.
-// The current size represents the number of items currently stored in the cache.
-// The size is returned as an int64 data type.
-// This method does not take any parameters.
-// Example usage:
-//
-//	cache := NewCache(10) // Create a new cache with a maximum of 10 items
-//	size := cache.Size() // Get the current size of the cache
+// This size is not computed to reduce costs on system calls due to locking/unlocking mutexes.
+// We use an atomic variable instead.
 func (c *Cache) Size() int64 {
 	return c.currentSize.Load()
 }

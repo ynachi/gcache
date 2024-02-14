@@ -12,7 +12,9 @@ package db
 import (
 	"github.com/ynachi/gcache/db/policy"
 	"github.com/ynachi/gcache/gerror"
+	"hash/fnv"
 	"strings"
+	"sync"
 )
 
 // Eviction defines how entries are evicted.
@@ -42,4 +44,58 @@ func CreateEvictionPolicy(evictionType string) (Eviction, error) {
 	default:
 		return nil, gerror.ErrEvictionPolicyNotFound
 	}
+}
+
+type CMap struct {
+	mu      sync.Mutex
+	buckets []map[string]*Entry
+}
+
+func NewCmap(size int) *CMap {
+	buckets := make([]map[string]*Entry, 0, size)
+	for i := 0; i < size; i++ {
+		buckets = append(buckets, make(map[string]*Entry))
+	}
+	return &CMap{
+		buckets: buckets,
+	}
+}
+
+func (c *CMap) GetBucket(key string) map[string]*Entry {
+	// no need for lock as the vector itself does not change
+	return c.buckets[hashFnv(key)%len(c.buckets)]
+}
+
+func (c *CMap) setEntry(key string, entry *Entry) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.GetBucket(key)[key] = entry
+}
+
+func (c *CMap) getEntryForKey(key string) *Entry {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.GetBucket(key)[key]
+}
+
+func (c *CMap) keyIn(key string) bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.GetBucket(key)[key] != nil
+}
+
+func (c *CMap) DeleteEntry(key string) int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if _, ok := c.GetBucket(key)[key]; ok {
+		delete(c.GetBucket(key), key)
+		return 1
+	}
+	return 0
+}
+
+func hashFnv(input string) int {
+	hasher := fnv.New64a()
+	hasher.Write([]byte(input))
+	return int(hasher.Sum64())
 }
